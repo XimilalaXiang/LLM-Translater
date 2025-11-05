@@ -467,6 +467,20 @@ ${sourceText}
     if (!row) return null;
     return JSON.parse(row.result_json);
   }
+
+  /**
+   * Search history by source text (SQL LIKE)
+   */
+  searchHistory(query: string, limit: number = 50): TranslationResponse[] {
+    const stmt = db.prepare(`
+      SELECT * FROM translation_history
+      WHERE source_text LIKE ?
+      ORDER BY created_at DESC
+      LIMIT ?
+    `);
+    const rows = stmt.all(`%${query}%`, limit) as any[];
+    return rows.map(row => JSON.parse(row.result_json));
+  }
 }
 
 export const translationService = new TranslationService();

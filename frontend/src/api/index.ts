@@ -58,6 +58,7 @@ export const translationApi = {
   progressReview: (payload: any) => api.post<never, ApiResponse<any>>('/translations/progress/review', payload),
   progressSynthesis: (payload: any) => api.post<never, ApiResponse<TranslationResponse>>('/translations/progress/synthesis', payload),
   getHistory: (limit?: number) => api.get<never, ApiResponse<TranslationResponse[]>>('/translations/history', { params: { limit } }),
+  searchHistory: (q: string, limit?: number) => api.get<never, ApiResponse<TranslationResponse[]>>('/translations/history/search', { params: { q, limit } }),
   getById: (id: string) => api.get<never, ApiResponse<TranslationResponse>>(`/translations/${id}`)
 };
 

@@ -6,6 +6,7 @@ import type { TranslationRequest, TranslationResponse, TranslationProgressStart,
 export const useTranslationStore = defineStore('translation', () => {
   const currentTranslation = ref<TranslationResponse | null>(null);
   const history = ref<TranslationResponse[]>([]);
+  const searchResults = ref<TranslationResponse[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -73,6 +74,24 @@ export const useTranslationStore = defineStore('translation', () => {
     }
   }
 
+  async function searchHistory(q: string, limit?: number) {
+    try {
+      if (!q.trim()) {
+        searchResults.value = [];
+        return [] as TranslationResponse[];
+      }
+      const response = await translationApi.searchHistory(q, limit);
+      if (response.success && response.data) {
+        searchResults.value = response.data;
+        return response.data;
+      }
+      return [] as TranslationResponse[];
+    } catch (err) {
+      console.error('Failed to search history:', err);
+      return [] as TranslationResponse[];
+    }
+  }
+
   async function loadTranslation(id: string) {
     try {
       const response = await translationApi.getById(id);
@@ -93,10 +112,12 @@ export const useTranslationStore = defineStore('translation', () => {
   return {
     currentTranslation,
     history,
+    searchResults,
     loading,
     error,
     translate,
     fetchHistory,
+    searchHistory,
     loadTranslation,
     clearCurrent
   };

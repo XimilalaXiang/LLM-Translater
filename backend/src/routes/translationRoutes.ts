@@ -55,6 +55,27 @@ router.get('/history', (req, res) => {
   }
 });
 
+// Search translation history by source text
+router.get('/history/search', (req, res) => {
+  try {
+    const q = (req.query.q as string) || '';
+    const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+    if (q.trim().length === 0) {
+      const response: ApiResponse = { success: true, data: [] };
+      return res.json(response);
+    }
+    const results = translationService.searchHistory(q, limit);
+    const response: ApiResponse = { success: true, data: results };
+    res.json(response);
+  } catch (error) {
+    const response: ApiResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+    res.status(500).json(response);
+  }
+});
+
 // Get translation by ID
 router.get('/:id', (req, res) => {
   try {
