@@ -75,48 +75,6 @@
           </button>
         </div>
 
-  <!-- Search Overlay -->
-  <div
-    v-if="searchOpen"
-    class="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm flex items-start justify-center p-4"
-    @click.self="closeSearch()"
-  >
-    <div class="w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div class="p-3 border-b border-gray-200 dark:border-gray-700">
-        <input
-          v-model="searchText"
-          type="text"
-          autofocus
-          placeholder="输入法律英语原文片段进行搜索…"
-          class="w-full px-3 py-2 rounded-md bg-gray-50 dark:bg-zinc-800 text-black dark:text-gray-100 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-0 focus:border-black dark:focus:border-white"
-          @input="onSearchInput"
-        />
-      </div>
-      <div class="max-h-[60vh] overflow-y-auto">
-        <div v-if="searching" class="p-6 text-center text-gray-500 dark:text-gray-400">
-          正在搜索…
-        </div>
-        <div v-else>
-          <div
-            v-for="item in searchResults"
-            :key="item.id"
-            class="p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
-            @click="selectFromSearch(item)"
-          >
-            <p class="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{{ item.sourceText }}</p>
-            <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-4">
-              <span>{{ formatDate(item.createdAt) }}</span>
-              <span>阶段1: {{ item.stage1Results.length }} 模型</span>
-              <span v-if="item.stage2Results.length > 0">阶段2: {{ item.stage2Results.length }} 审核</span>
-            </div>
-          </div>
-          <div v-if="!searchResults.length && searchText.trim() !== '' && !searching" class="p-6 text-center text-gray-500 dark:text-gray-400">没有匹配的历史记录</div>
-          <div v-if="searchText.trim() === '' && !searching" class="p-6 text-center text-gray-500 dark:text-gray-400">输入关键词开始搜索</div>
-        </div>
-      </div>
-      <div class="p-3 text-right text-xs text-gray-500 dark:text-gray-400">按 Esc 关闭</div>
-    </div>
-  </div>
         <!-- Source Text -->
         <div class="mb-6">
           <h4 class="font-bold mb-2">原文</h4>
@@ -202,10 +160,55 @@
       </div>
     </div>
   </div>
+
+  <!-- Search Overlay moved outside modal and teleported to body -->
+  <teleport to="body">
+    <div
+      v-if="searchOpen"
+      class="fixed inset-0 z-60 bg-black bg-opacity-50 backdrop-blur-sm flex items-start justify-center p-4"
+      @click.self="closeSearch()"
+    >
+      <div class="w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+          <input
+            ref="searchInputRef"
+            v-model="searchText"
+            type="text"
+            placeholder="输入法律英语原文片段进行搜索…"
+            class="w-full px-3 py-2 rounded-md bg-gray-50 dark:bg-zinc-800 text-black dark:text-gray-100 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-0 focus:border-black dark:focus:border-white"
+            @input="onSearchInput"
+          />
+        </div>
+        <div class="max-h-[60vh] overflow-y-auto">
+          <div v-if="searching" class="p-6 text-center text-gray-500 dark:text-gray-400">
+            正在搜索…
+          </div>
+          <div v-else>
+            <div
+              v-for="item in searchResults"
+              :key="item.id"
+              class="p-4 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-zinc-800 cursor-pointer"
+              @click="selectFromSearch(item)"
+            >
+              <p class="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{{ item.sourceText }}</p>
+              <div class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-4">
+                <span>{{ formatDate(item.createdAt) }}</span>
+                <span>阶段1: {{ item.stage1Results.length }} 模型</span>
+                <span v-if="item.stage2Results.length > 0">阶段2: {{ item.stage2Results.length }} 审核</span>
+              </div>
+            </div>
+            <div v-if="!searchResults.length && searchText.trim() !== '' && !searching" class="p-6 text-center text-gray-500 dark:text-gray-400">没有匹配的历史记录</div>
+            <div v-if="searchText.trim() === '' && !searching" class="p-6 text-center text-gray-500 dark:text-gray-400">输入关键词开始搜索</div>
+          </div>
+        </div>
+        <div class="p-3 text-right text-xs text-gray-500 dark:text-gray-400">按 Esc 关闭</div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import MarkdownIt from 'markdown-it';
 import { useTranslationStore } from '@/stores/translationStore';
 import type { TranslationResponse } from '@/types';
@@ -220,23 +223,40 @@ const searchResults = computed(() => translationStore.searchResults);
 
 onMounted(() => {
   translationStore.fetchHistory();
+  window.addEventListener('keydown', onKeyDown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown);
 });
 
 // Search overlay state
 const searchOpen = ref(false);
 const searchText = ref('');
 const searching = ref(false);
+const searchInputRef = ref<HTMLInputElement | null>(null);
 let debounceTimer: any = null;
 
 function openSearch() {
+  selectedItem.value = null; // 避免与详情弹窗叠加
   searchOpen.value = true;
-  setTimeout(() => {
-    // allow input autofocus to work
-  }, 0);
+  searchText.value = '';
+  nextTick(() => {
+    searchInputRef.value?.focus();
+  });
 }
 function closeSearch() {
   searchOpen.value = false;
   searching.value = false;
+}
+
+function onKeyDown(e: KeyboardEvent) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    openSearch();
+  } else if (e.key === 'Escape') {
+    closeSearch();
+  }
 }
 
 async function triggerSearch() {
