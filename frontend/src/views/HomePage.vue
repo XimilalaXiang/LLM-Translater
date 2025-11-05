@@ -9,11 +9,11 @@
 
       <!-- Input Section -->
       <div class="mb-6">
-        <div class="bg-white border-2 border-black rounded-2xl p-6">
+        <div class="bg-white dark:bg-zinc-900 border-2 border-black dark:border-gray-700 rounded-2xl p-6">
           <textarea
             v-model="sourceText"
             placeholder="请输入法律英语文本..."
-            class="w-full h-40 resize-none border-0 focus:outline-none text-base"
+            class="w-full h-40 resize-none border-0 focus:outline-none text-base bg-transparent dark:text-gray-100"
           ></textarea>
 
           <!-- Options -->

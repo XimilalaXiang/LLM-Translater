@@ -1,8 +1,8 @@
 <template>
   <div class="history-page">
     <div class="mb-8">
-      <h2 class="text-2xl font-bold text-black mb-2">翻译历史</h2>
-      <p class="text-gray-600">查看历史翻译记录</p>
+      <h2 class="text-2xl font-bold text-black dark:text-white mb-2">翻译历史</h2>
+      <p class="text-gray-600 dark:text-gray-300">查看历史翻译记录</p>
     </div>
 
     <!-- History List -->
@@ -10,13 +10,13 @@
       <div
         v-for="item in history"
         :key="item.id"
-        class="border-2 border-gray-200 rounded-xl p-6 hover:border-gray-400 transition-colors cursor-pointer"
+        class="border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-gray-400 dark:hover:border-gray-500 transition-colors cursor-pointer"
         @click="handleViewDetail(item)"
       >
         <div class="flex justify-between items-start mb-4">
           <div class="flex-1">
-            <p class="text-gray-800 line-clamp-2 mb-2">{{ item.sourceText }}</p>
-            <div class="flex items-center space-x-4 text-sm text-gray-500">
+            <p class="text-gray-800 dark:text-gray-200 line-clamp-2 mb-2">{{ item.sourceText }}</p>
+            <div class="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
               <span>{{ formatDate(item.createdAt) }}</span>
               <span>耗时: {{ item.totalDuration }}ms</span>
               <span>阶段1: {{ item.stage1Results.length }}个模型</span>
@@ -30,12 +30,12 @@
           </div>
         </div>
 
-        <div v-if="item.finalTranslation" class="bg-gray-50 rounded-lg p-4">
-          <p class="text-sm text-gray-700 line-clamp-3">{{ item.finalTranslation }}</p>
+        <div v-if="item.finalTranslation" class="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4">
+          <p class="text-sm text-gray-700 dark:text-gray-200 line-clamp-3">{{ item.finalTranslation }}</p>
         </div>
       </div>
 
-      <div v-if="history.length === 0 && !loading" class="text-center py-12 text-gray-500">
+      <div v-if="history.length === 0 && !loading" class="text-center py-12 text-gray-500 dark:text-gray-400">
         暂无翻译历史
       </div>
 
@@ -50,12 +50,12 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       @click.self="selectedItem = null"
     >
-      <div class="bg-white rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white dark:bg-zinc-900 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-start mb-6">
           <h3 class="text-xl font-bold">翻译详情</h3>
           <button
             @click="selectedItem = null"
-            class="text-gray-500 hover:text-black"
+            class="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
           >
             ✕
           </button>
@@ -64,8 +64,8 @@
         <!-- Source Text -->
         <div class="mb-6">
           <h4 class="font-bold mb-2">原文</h4>
-          <div class="bg-gray-50 rounded-lg p-4">
-            <p class="text-gray-800">{{ selectedItem.sourceText }}</p>
+          <div class="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4">
+            <p class="text-gray-800 dark:text-gray-200">{{ selectedItem.sourceText }}</p>
           </div>
         </div>
 
@@ -79,13 +79,13 @@
             <div
               v-for="result in selectedItem.stage1Results"
               :key="result.modelId"
-              class="bg-gray-50 rounded-lg p-4"
+              class="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4"
             >
               <div class="flex justify-between items-center mb-2">
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
-                <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 text-sm">{{ result.output }}</p>
+              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>
@@ -101,13 +101,13 @@
             <div
               v-for="result in selectedItem.stage2Results"
               :key="`${result.modelId}-${result.translationModelId}`"
-              class="bg-gray-50 rounded-lg p-4"
+              class="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4"
             >
               <div class="flex justify-between items-center mb-2">
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
-                <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 text-sm">{{ result.output }}</p>
+              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>
@@ -123,13 +123,13 @@
             <div
               v-for="result in selectedItem.stage3Results"
               :key="result.modelId"
-              class="bg-gray-50 rounded-lg p-4"
+              class="bg-gray-50 dark:bg-zinc-900 rounded-lg p-4"
             >
               <div class="flex justify-between items-center mb-2">
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
-                <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 text-sm">{{ result.output }}</p>
+              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>

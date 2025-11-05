@@ -1,11 +1,11 @@
 <template>
-  <div class="app min-h-screen bg-white">
+  <div class="app min-h-screen bg-white dark:bg-black text-black dark:text-gray-100">
     <!-- Header Navigation -->
-    <header class="border-b border-gray-300">
+    <header class="border-b border-gray-300 dark:border-gray-700">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center space-x-8">
-            <h1 class="text-xl font-bold text-black">法律翻译审核系统</h1>
+            <h1 class="text-xl font-bold text-black dark:text-white">法律翻译审核系统</h1>
             <nav class="flex space-x-4">
               <router-link
                 to="/"
@@ -37,6 +37,11 @@
               </router-link>
             </nav>
           </div>
+          <div class="flex items-center space-x-3">
+            <button @click="toggleTheme" class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-md hover:border-black dark:hover:border-white transition-colors">
+              {{ isDark ? '切换到亮色' : '切换到暗色' }}
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -49,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useModelStore } from '@/stores/modelStore';
 import { useKnowledgeStore } from '@/stores/knowledgeStore';
 
@@ -60,15 +65,31 @@ onMounted(() => {
   // Load initial data
   modelStore.fetchModels();
   knowledgeStore.fetchKnowledgeBases();
+  // initialize theme
+  const saved = localStorage.getItem('theme');
+  const preferDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const enableDark = saved ? saved === 'dark' : preferDark;
+  setDark(enableDark);
 });
+
+const isDark = ref(false);
+function setDark(v: boolean) {
+  isDark.value = v;
+  const root = document.documentElement;
+  if (v) root.classList.add('dark'); else root.classList.remove('dark');
+  localStorage.setItem('theme', v ? 'dark' : 'light');
+}
+function toggleTheme() {
+  setDark(!isDark.value);
+}
 </script>
 
 <style scoped>
 .nav-link {
-  @apply px-3 py-2 text-sm font-medium text-gray-700 hover:text-black hover:bg-gray-100 rounded-md transition-colors;
+  @apply px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors;
 }
 
 .nav-link-active {
-  @apply text-black bg-gray-100;
+  @apply text-black bg-gray-100 dark:text-white dark:bg-gray-800;
 }
 </style>

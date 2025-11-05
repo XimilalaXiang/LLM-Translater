@@ -2,8 +2,8 @@
   <div class="models-page">
     <div class="mb-8 flex justify-between items-center">
       <div>
-        <h2 class="text-2xl font-bold text-black mb-2">模型配置</h2>
-        <p class="text-gray-600">管理翻译、审核、综合和嵌入模型</p>
+        <h2 class="text-2xl font-bold text-black dark:text-white mb-2">模型配置</h2>
+        <p class="text-gray-600 dark:text-gray-300">管理翻译、审核、综合和嵌入模型</p>
       </div>
       <button
         @click="openCreateModal()"
@@ -14,7 +14,7 @@
     </div>
 
     <!-- Model Tabs -->
-    <div class="border-b border-gray-300 mb-6">
+    <div class="border-b border-gray-300 dark:border-gray-700 mb-6">
       <div class="flex space-x-1">
         <button
           v-for="stage in stages"
@@ -24,7 +24,7 @@
             'px-4 py-2 font-medium text-sm rounded-t-lg transition-colors',
             currentStage === stage.value
               ? 'bg-black text-white'
-              : 'text-gray-600 hover:text-black hover:bg-gray-100'
+              : 'text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
           ]"
         >
           {{ stage.label }}
@@ -37,7 +37,7 @@
       <div
         v-for="model in filteredModels"
         :key="model.id"
-        class="border-2 border-gray-200 rounded-xl p-6 hover:border-gray-400 transition-colors"
+        class="border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
       >
         <div class="flex items-start justify-between">
           <div class="flex-1">
@@ -55,26 +55,26 @@
 
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span class="text-gray-500">API端点:</span>
-                <span class="ml-2 text-gray-800">{{ model.apiEndpoint }}</span>
+                <span class="text-gray-500 dark:text-gray-400">API端点:</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.apiEndpoint }}</span>
               </div>
               <div>
-                <span class="text-gray-500">模型ID:</span>
-                <span class="ml-2 text-gray-800">{{ model.modelId }}</span>
+                <span class="text-gray-500 dark:text-gray-400">模型ID:</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.modelId }}</span>
               </div>
               <div v-if="model.stage !== 'embedding'">
-                <span class="text-gray-500">温度:</span>
-                <span class="ml-2 text-gray-800">{{ model.temperature ?? '默认' }}</span>
+                <span class="text-gray-500 dark:text-gray-400">温度:</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.temperature ?? '默认' }}</span>
               </div>
               <div v-if="model.stage !== 'embedding'">
-                <span class="text-gray-500">最大Token:</span>
-                <span class="ml-2 text-gray-800">{{ model.maxTokens ?? '默认' }}</span>
+                <span class="text-gray-500 dark:text-gray-400">最大Token:</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.maxTokens ?? '默认' }}</span>
               </div>
             </div>
 
             <div class="mt-3" v-if="model.stage !== 'embedding' && model.systemPrompt">
-              <span class="text-gray-500 text-sm">系统提示词:</span>
-              <p class="text-gray-800 text-sm mt-1 line-clamp-2">{{ model.systemPrompt }}</p>
+              <span class="text-gray-500 dark:text-gray-400 text-sm">系统提示词:</span>
+              <p class="text-gray-800 dark:text-gray-200 text-sm mt-1 line-clamp-2">{{ model.systemPrompt }}</p>
             </div>
           </div>
 
@@ -82,20 +82,20 @@
           <div class="flex items-center space-x-2 ml-4">
             <button
               @click="handleTest(model.id)"
-              class="px-3 py-1 text-sm border-2 border-gray-300 rounded-lg hover:border-black transition-colors"
+              class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-black dark:hover:border-white transition-colors"
               :disabled="testing === model.id"
             >
               {{ testing === model.id ? '测试中...' : '测试' }}
             </button>
             <button
               @click="handleToggle(model.id)"
-              class="px-3 py-1 text-sm border-2 border-gray-300 rounded-lg hover:border-black transition-colors"
+              class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-black dark:hover:border-white transition-colors"
             >
               {{ model.enabled ? '禁用' : '启用' }}
             </button>
             <button
               @click="handleEdit(model)"
-              class="px-3 py-1 text-sm border-2 border-gray-300 rounded-lg hover:border-black transition-colors"
+              class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-black dark:hover:border-white transition-colors"
             >
               编辑
             </button>
@@ -109,7 +109,7 @@
         </div>
       </div>
 
-      <div v-if="filteredModels.length === 0" class="text-center py-12 text-gray-500">
+      <div v-if="filteredModels.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
         暂无{{ stageLabel }}模型
       </div>
     </div>
@@ -120,7 +120,7 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
       @click.self="closeModal"
     >
-      <div class="bg-white rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white dark:bg-zinc-900 rounded-xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <h3 class="text-xl font-bold mb-6">
           {{ editingModel ? '编辑模型' : '添加模型' }}
         </h3>
@@ -131,7 +131,7 @@
             <input
               v-model="formData.name"
               type="text"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
               placeholder="例如: GPT-4"
             />
           </div>
@@ -140,7 +140,7 @@
             <label class="block text-sm font-medium mb-2">阶段</label>
             <select
               v-model="formData.stage"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
             >
               <option value="translation">翻译模型</option>
               <option value="review">审核模型</option>
@@ -154,7 +154,7 @@
             <input
               v-model="formData.apiEndpoint"
               type="url"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
               :placeholder="formData.stage === 'embedding' ? 'https://api.openai.com/v1/embeddings' : 'https://api.openai.com/v1/chat/completions'"
             />
           </div>
@@ -164,7 +164,7 @@
             <input
               v-model="formData.apiKey"
               type="password"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
               placeholder="sk-..."
             />
           </div>
@@ -174,7 +174,7 @@
             <input
               v-model="formData.modelId"
               type="text"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
               placeholder="gpt-4"
             />
           </div>
@@ -224,7 +224,7 @@
           </button>
           <button
             @click="closeModal"
-            class="flex-1 border-2 border-gray-300 py-2 rounded-lg hover:border-black transition-colors"
+            class="flex-1 border-2 border-gray-300 dark:border-gray-600 py-2 rounded-lg hover:border-black dark:hover:border-white transition-colors"
           >
             取消
           </button>
