@@ -3,8 +3,8 @@
     <div class="max-w-4xl mx-auto">
       <!-- Title -->
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-black mb-2">法律英语翻译</h2>
-        <p class="text-gray-600">输入法律英语文本，系统将通过三阶段工作流生成专业译文</p>
+        <h2 class="text-2xl font-bold text-black dark:text-white mb-2">法律英语翻译</h2>
+        <p class="text-gray-600 dark:text-gray-300">输入法律英语文本，系统将通过三阶段工作流生成专业译文</p>
       </div>
 
       <!-- Input Section -->
