@@ -182,11 +182,18 @@ const getModelName = (modelId: string) => {
 };
 
 // Markdown renderer
-const md = new MarkdownIt({ breaks: true, linkify: true });
+const md = new MarkdownIt({ breaks: true, linkify: true, typographer: true });
+const normalizeMarkdown = (input: string) => {
+  let out = input.replace(/\r\n/g, '\n');
+  // Normalize full-width characters and excessive leading spaces before headings
+  out = out.replace(/\uFF03/g, '#').replace(/\u3000/g, ' ');
+  out = out.replace(/^[ \t]+(?=#)/gm, '');
+  return out;
+};
 const renderMd = (text?: string) => {
   if (!text) return '';
   try {
-    return md.render(String(text));
+    return md.render(normalizeMarkdown(String(text)));
   } catch {
     return String(text);
   }
