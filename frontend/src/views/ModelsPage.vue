@@ -6,7 +6,7 @@
         <p class="text-gray-600">管理翻译、审核、综合和嵌入模型</p>
       </div>
       <button
-        @click="showCreateModal = true"
+        @click="openCreateModal()"
         class="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
       >
         + 添加模型
@@ -248,7 +248,7 @@ const stages = [
   { value: 'embedding', label: '嵌入模型' }
 ];
 
-const currentStage = ref<string>('translation');
+const currentStage = ref<'translation' | 'review' | 'synthesis' | 'embedding'>('translation');
 const showCreateModal = ref(false);
 const editingModel = ref<ModelConfig | null>(null);
 const testing = ref<string | null>(null);
@@ -296,6 +296,11 @@ const handleEdit = (model: ModelConfig) => {
     temperature: model.temperature,
     maxTokens: model.maxTokens
   };
+};
+
+const openCreateModal = () => {
+  formData.value.stage = currentStage.value;
+  showCreateModal.value = true;
 };
 
 const handleSave = async () => {
@@ -346,7 +351,7 @@ const closeModal = () => {
   editingModel.value = null;
   formData.value = {
     name: '',
-    stage: 'translation',
+    stage: currentStage.value,
     apiEndpoint: '',
     apiKey: '',
     modelId: '',
