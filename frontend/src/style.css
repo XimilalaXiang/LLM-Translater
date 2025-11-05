@@ -107,3 +107,19 @@ body {
   background-color: transparent; /* 继承容器黑底 */
   color: #ffffff;
 }
+
+/* Global dark-mode overrides for any Markdown block */
+.dark .prose table {
+  background-color: transparent !important;
+}
+
+.dark .prose th,
+.dark .prose td {
+  border: 2px solid rgba(255, 255, 255, 0.6) !important;
+  color: #ffffff; /* ensure sufficient contrast */
+}
+
+.dark .prose thead th {
+  background-color: #000000 !important; /* force black header in dark mode */
+  color: #ffffff !important;
+}
