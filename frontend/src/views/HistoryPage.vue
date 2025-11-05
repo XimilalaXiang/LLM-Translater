@@ -85,7 +85,7 @@
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-200" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>
@@ -107,7 +107,7 @@
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-200" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>
@@ -129,7 +129,7 @@
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
                 <span class="text-xs text-gray-500 dark:text-gray-400">{{ result.duration }}ms</span>
               </div>
-              <p v-if="!result.error" class="text-gray-800 dark:text-gray-200 text-sm">{{ result.output }}</p>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-200" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">{{ result.error }}</p>
             </div>
           </div>
@@ -138,7 +138,7 @@
         <!-- Final Translation -->
         <div v-if="selectedItem.finalTranslation" class="bg-black text-white rounded-lg p-6">
           <h4 class="font-bold mb-3">最终译文</h4>
-          <p class="leading-relaxed">{{ selectedItem.finalTranslation }}</p>
+          <div class="prose prose-invert max-w-none" v-html="renderMd(selectedItem.finalTranslation)"></div>
           <div class="mt-4 pt-4 border-t border-gray-700 text-sm text-gray-300">
             总耗时: {{ selectedItem.totalDuration }}ms
           </div>
@@ -150,6 +150,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import MarkdownIt from 'markdown-it';
 import { useTranslationStore } from '@/stores/translationStore';
 import type { TranslationResponse } from '@/types';
 
@@ -171,6 +172,23 @@ const handleViewDetail = (item: TranslationResponse) => {
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
   return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN');
+};
+
+// Markdown renderer (reuse HomePage behavior)
+const md = new MarkdownIt({ breaks: true, linkify: true, typographer: true });
+const normalizeMarkdown = (input: string) => {
+  let out = input.replace(/\r\n/g, '\n');
+  out = out.replace(/\uFF03/g, '#').replace(/\u3000/g, ' ');
+  out = out.replace(/^[ \t]+(?=#)/gm, '');
+  return out;
+};
+const renderMd = (text?: string) => {
+  if (!text) return '';
+  try {
+    return md.render(normalizeMarkdown(String(text)));
+  } catch {
+    return String(text);
+  }
 };
 </script>
 
