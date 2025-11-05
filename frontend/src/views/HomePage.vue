@@ -65,7 +65,7 @@
       <!-- Results Section -->
       <div v-if="currentTranslation" class="space-y-6">
         <!-- Stage 1: Translation Results -->
-        <div class="bg-white border-2 border-gray-200 rounded-xl p-6">
+        <div class="bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6">
           <h3 class="text-lg font-bold mb-4 flex items-center">
             <span class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center mr-3 text-sm">1</span>
             初始翻译
@@ -80,7 +80,7 @@
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
                 <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
               </div>
-              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800" v-html="renderMd(result.output)"></div>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-100" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">错误: {{ result.error }}</p>
             </div>
           </div>
@@ -89,7 +89,7 @@
         <!-- Stage 2: Review Results -->
         <div
           v-if="currentTranslation.stage2Results.length > 0"
-          class="bg-white border-2 border-gray-200 rounded-xl p-6"
+          class="bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6"
         >
           <h3 class="text-lg font-bold mb-4 flex items-center">
             <span class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center mr-3 text-sm">2</span>
@@ -107,7 +107,7 @@
                 </span>
                 <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
               </div>
-              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800" v-html="renderMd(result.output)"></div>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-100" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">错误: {{ result.error }}</p>
             </div>
           </div>
@@ -116,7 +116,7 @@
         <!-- Stage 3: Synthesis Results -->
         <div
           v-if="currentTranslation.stage3Results.length > 0"
-          class="bg-white border-2 border-gray-200 rounded-xl p-6"
+          class="bg-white dark:bg-zinc-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6"
         >
           <h3 class="text-lg font-bold mb-4 flex items-center">
             <span class="w-8 h-8 bg-black text-white rounded-full flex items-center justify-center mr-3 text-sm">3</span>
@@ -132,7 +132,7 @@
                 <span class="font-medium text-sm">{{ result.modelName }}</span>
                 <span class="text-xs text-gray-500">{{ result.duration }}ms</span>
               </div>
-              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800" v-html="renderMd(result.output)"></div>
+              <div v-if="!result.error" class="prose prose-sm max-w-none text-gray-800 dark:prose-invert dark:text-gray-100" v-html="renderMd(result.output)"></div>
               <p v-else class="text-red-500 text-sm">错误: {{ result.error }}</p>
             </div>
           </div>
@@ -149,7 +149,7 @@
       </div>
 
       <!-- Error Display -->
-      <div v-if="error" class="bg-red-50 border-2 border-red-500 rounded-xl p-4 text-red-800">
+      <div v-if="error" class="bg-red-50 dark:bg-red-900 border-2 border-red-500 dark:border-red-600 rounded-xl p-4 text-red-800 dark:text-red-100">
         {{ error }}
       </div>
     </div>
