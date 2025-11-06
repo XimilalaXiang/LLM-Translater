@@ -64,7 +64,7 @@
       class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       @click.self="selectedItem = null"
     >
-      <div class="bg-white dark:bg-zinc-900 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="bg-white dark:bg-zinc-900 rounded-xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto overscroll-contain">
         <div class="flex justify-between items-start mb-6">
           <h3 class="text-xl font-bold">翻译详情</h3>
           <button
@@ -165,7 +165,7 @@
   <teleport to="body">
     <div
       v-if="searchOpen"
-      class="fixed inset-0 z-60 bg-black bg-opacity-50 backdrop-blur-sm flex items-start justify-center p-4"
+      class="fixed inset-0 z-[60] bg-black bg-opacity-50 backdrop-blur-sm flex items-start justify-center p-4"
       @click.self="closeSearch()"
     >
       <div class="w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-xl shadow-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -179,7 +179,7 @@
             @input="onSearchInput"
           />
         </div>
-        <div class="max-h-[60vh] overflow-y-auto">
+        <div class="max-h-[60vh] overflow-y-auto overscroll-contain">
           <div v-if="searching" class="p-6 text-center text-gray-500 dark:text-gray-400">
             正在搜索…
           </div>
@@ -208,7 +208,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import MarkdownIt from 'markdown-it';
 import { useTranslationStore } from '@/stores/translationStore';
 import type { TranslationResponse } from '@/types';
@@ -230,12 +230,27 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeyDown);
 });
 
-// Search overlay state
+// Search overlay state (declare BEFORE watchers)
 const searchOpen = ref(false);
 const searchText = ref('');
 const searching = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
 let debounceTimer: any = null;
+
+// Body scroll lock when any overlay is open
+const isOverlayOpen = () => !!selectedItem.value || searchOpen.value;
+watch([selectedItem, () => searchOpen.value], () => {
+  const locked = isOverlayOpen();
+  const html = document.documentElement;
+  const body = document.body;
+  if (locked) {
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+  } else {
+    html.style.overflow = '';
+    body.style.overflow = '';
+  }
+}, { immediate: true });
 
 function openSearch() {
   selectedItem.value = null; // 避免与详情弹窗叠加
@@ -255,7 +270,11 @@ function onKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     openSearch();
   } else if (e.key === 'Escape') {
-    closeSearch();
+    if (searchOpen.value) {
+      closeSearch();
+    } else if (selectedItem.value) {
+      selectedItem.value = null;
+    }
   }
 }
 
