@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+import pLimit from 'p-limit';
 import type {
   KnowledgeBase,
   CreateKnowledgeBaseDto,
@@ -97,29 +98,32 @@ export class KnowledgeService {
       throw new Error('Embedding model not found');
     }
 
-    // Generate embeddings for chunks
+    // Generate embeddings for chunks with concurrency control
     console.log(`Generating embeddings for ${chunks.length} chunks...`);
+    const concurrency = parseInt(process.env.EMBEDDING_CONCURRENCY || '4', 10);
+    const limit = pLimit(Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 4);
     const chunksWithEmbeddings = await Promise.all(
-      chunks.map(async (chunk, index) => {
-        try {
-          const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-          return {
-            id: `${id}_chunk_${index}`,
-            content: chunk,
-            embedding,
-            metadata: { index, knowledgeBaseId: id }
-          };
-        } catch (error) {
-          console.error(`Failed to generate embedding for chunk ${index}:`, error);
-          // Return with empty embedding if fails
-          return {
-            id: `${id}_chunk_${index}`,
-            content: chunk,
-            embedding: [],
-            metadata: { index, knowledgeBaseId: id }
-          };
-        }
-      })
+      chunks.map((chunk, index) =>
+        limit(async () => {
+          try {
+            const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+            return {
+              id: `${id}_chunk_${index}`,
+              content: chunk,
+              embedding,
+              metadata: { index, knowledgeBaseId: id }
+            };
+          } catch (error) {
+            console.error(`Failed to generate embedding for chunk ${index}:`, error);
+            return {
+              id: `${id}_chunk_${index}`,
+              content: chunk,
+              embedding: [],
+              metadata: { index, knowledgeBaseId: id }
+            };
+          }
+        })
+      )
     );
 
     // Store in vector store
@@ -334,25 +338,29 @@ export class KnowledgeService {
           continue;
         }
 
+        const concurrency = parseInt(process.env.EMBEDDING_CONCURRENCY || '4', 10);
+        const limit = pLimit(Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 4);
         const chunksWithEmbeddings = await Promise.all(
-          chunks.map(async (chunk, index) => {
-            try {
-              const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-              return {
-                id: `${kb.id}_chunk_${index}`,
-                content: chunk,
-                embedding,
-                metadata: { index, knowledgeBaseId: kb.id }
-              };
-            } catch (error) {
-              return {
-                id: `${kb.id}_chunk_${index}`,
-                content: chunk,
-                embedding: [],
-                metadata: { index, knowledgeBaseId: kb.id }
-              };
-            }
-          })
+          chunks.map((chunk, index) =>
+            limit(async () => {
+              try {
+                const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+                return {
+                  id: `${kb.id}_chunk_${index}`,
+                  content: chunk,
+                  embedding,
+                  metadata: { index, knowledgeBaseId: kb.id }
+                };
+              } catch (error) {
+                return {
+                  id: `${kb.id}_chunk_${index}`,
+                  content: chunk,
+                  embedding: [],
+                  metadata: { index, knowledgeBaseId: kb.id }
+                };
+              }
+            })
+          )
         );
 
         vectorStore[kb.id] = { chunks: chunksWithEmbeddings };

@@ -159,6 +159,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import MarkdownIt from 'markdown-it';
+import DOMPurify from 'dompurify';
 import { useTranslationStore } from '@/stores/translationStore';
 import { useKnowledgeStore } from '@/stores/knowledgeStore';
 import { useModelStore } from '@/stores/modelStore';
@@ -193,7 +194,8 @@ const normalizeMarkdown = (input: string) => {
 const renderMd = (text?: string) => {
   if (!text) return '';
   try {
-    return md.render(normalizeMarkdown(String(text)));
+    const html = md.render(normalizeMarkdown(String(text)));
+    return DOMPurify.sanitize(html);
   } catch {
     return String(text);
   }
