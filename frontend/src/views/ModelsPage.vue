@@ -180,12 +180,12 @@
           </div>
 
           <div v-if="formData.stage !== 'embedding'">
-            <label class="block text-sm font-medium mb-2">系统提示词</label>
+            <label class="block text-sm font-medium mb-2">系统提示词（留空将使用默认）</label>
             <textarea
               v-model="formData.systemPrompt"
               rows="4"
-              class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:border-black focus:outline-none"
-              placeholder="你是一个专业的法律翻译..."
+              class="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 dark:bg-zinc-900 dark:text-gray-100 rounded-lg focus:border-black dark:focus:border-white focus:outline-none"
+              placeholder="你是一个专业的法律翻译...（可留空使用默认提示词）"
             ></textarea>
           </div>
 
@@ -273,15 +273,10 @@ const stageLabel = computed(() => {
 });
 
 const isFormValid = computed(() => {
-  const baseValid = formData.value.name.trim() !== '' &&
+  return formData.value.name.trim() !== '' &&
     formData.value.apiEndpoint.trim() !== '' &&
     formData.value.apiKey.trim() !== '' &&
     formData.value.modelId.trim() !== '';
-
-  if (formData.value.stage === 'embedding') {
-    return baseValid;
-  }
-  return baseValid && (formData.value.systemPrompt?.trim() !== '');
 });
 
 const handleEdit = (model: ModelConfig) => {

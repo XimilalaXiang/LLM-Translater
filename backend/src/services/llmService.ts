@@ -1,7 +1,65 @@
 import axios, { AxiosError } from 'axios';
+import fs from 'fs';
+import path from 'path';
 import type { ModelConfig, LLMRequest, LLMResponse, LLMMessage } from '../types';
 
 export class LLMService {
+  private defaultPromptCache: Record<'translation' | 'review' | 'synthesis', string | null> = {
+    translation: null,
+    review: null,
+    synthesis: null
+  };
+
+  private resolveSystemPrompt(config: ModelConfig): string | undefined {
+    if (config.systemPrompt && config.systemPrompt.trim().length > 0) {
+      return config.systemPrompt;
+    }
+
+    // Load default prompt by stage
+    if (config.stage === 'embedding') return undefined;
+    const stage = config.stage as 'translation' | 'review' | 'synthesis';
+    return this.getDefaultPromptForStage(stage) || undefined;
+  }
+
+  private getDefaultPromptForStage(stage: 'translation' | 'review' | 'synthesis'): string | null {
+    if (this.defaultPromptCache[stage] !== null) {
+      return this.defaultPromptCache[stage];
+    }
+
+    const fileNameMap: Record<typeof stage, string> = {
+      translation: 'first_prompt.md',
+      review: 'second_prompt.md',
+      synthesis: 'third_prompt.md'
+    };
+
+    const candidates: string[] = [];
+    const envDir = process.env.DEFAULT_PROMPTS_DIR;
+    if (envDir) {
+      candidates.push(path.resolve(envDir, fileNameMap[stage]));
+    }
+    // When compiled, __dirname is dist/services; prompts copied to dist/prompts
+    candidates.push(path.resolve(__dirname, '../prompts', fileNameMap[stage]));
+    // Dev runs (tsx), __dirname is src/services; try project prompts locations
+    candidates.push(path.resolve(__dirname, '../../prompts', fileNameMap[stage]));
+    candidates.push(path.resolve(process.cwd(), 'backend/prompts', fileNameMap[stage]));
+    candidates.push(path.resolve(process.cwd(), 'prompts', fileNameMap[stage]));
+
+    for (const p of candidates) {
+      try {
+        if (fs.existsSync(p)) {
+          const content = fs.readFileSync(p, 'utf-8');
+          this.defaultPromptCache[stage] = content;
+          return content;
+        }
+      } catch {
+        // ignore and continue
+      }
+    }
+
+    this.defaultPromptCache[stage] = null;
+    return null;
+  }
+
   /**
    * Call LLM API with the given configuration and messages
    */
@@ -22,10 +80,11 @@ export class LLMService {
         finalMessages = [contextMessage, ...messages];
       }
 
-      // Add system prompt if provided
-      if (config.systemPrompt) {
+      // Add system prompt if provided; otherwise try default by stage
+      const systemPrompt = this.resolveSystemPrompt(config);
+      if (systemPrompt) {
         finalMessages = [
-          { role: 'system', content: config.systemPrompt },
+          { role: 'system', content: systemPrompt },
           ...finalMessages
         ];
       }

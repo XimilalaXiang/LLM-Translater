@@ -27,6 +27,8 @@ export function initDatabase() {
       api_key TEXT NOT NULL,
       model_id TEXT NOT NULL,
       system_prompt TEXT NOT NULL,
+      -- whether streaming is enabled for this model (0/1)
+      stream_enabled INTEGER DEFAULT 0,
       temperature REAL,
       max_tokens INTEGER,
       top_p REAL,
@@ -39,6 +41,13 @@ export function initDatabase() {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Try to add stream_enabled if missing (older databases)
+  try {
+    db.exec(`ALTER TABLE model_configs ADD COLUMN stream_enabled INTEGER DEFAULT 0`);
+  } catch (e) {
+    // ignore if column already exists
+  }
 
   // Knowledge base table
   db.exec(`

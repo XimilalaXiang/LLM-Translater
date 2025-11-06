@@ -23,6 +23,9 @@ RUN npm ci --omit=dev
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
+# Copy default prompts for runtime fallback system prompts
+COPY backend/prompts ./dist/prompts
+
 # Create persistent directories for sqlite and uploads
 RUN mkdir -p /app/data /app/uploads
 
