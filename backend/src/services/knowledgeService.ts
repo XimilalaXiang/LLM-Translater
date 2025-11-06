@@ -117,29 +117,29 @@ export class KnowledgeService {
       throw new Error('Embedding model not found');
     }
 
-    // Generate embeddings for chunks with concurrency control
+    // Generate embeddings for chunks (no concurrency limit)
     console.log(`Generating embeddings for ${chunks.length} chunks...`);
-    const concurrency = parseInt(process.env.EMBEDDING_CONCURRENCY || '4', 10);
-    const limit = Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 4;
-    const chunksWithEmbeddings = await mapWithConcurrency(chunks, limit, async (chunk, index) => {
-      try {
-        const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-        return {
-          id: `${id}_chunk_${index}`,
-          content: chunk,
-          embedding,
-          metadata: { index, knowledgeBaseId: id }
-        };
-      } catch (error) {
-        console.error(`Failed to generate embedding for chunk ${index}:`, error);
-        return {
-          id: `${id}_chunk_${index}`,
-          content: chunk,
-          embedding: [],
-          metadata: { index, knowledgeBaseId: id }
-        };
-      }
-    });
+    const chunksWithEmbeddings = await Promise.all(
+      chunks.map(async (chunk, index) => {
+        try {
+          const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+          return {
+            id: `${id}_chunk_${index}`,
+            content: chunk,
+            embedding,
+            metadata: { index, knowledgeBaseId: id }
+          };
+        } catch (error) {
+          console.error(`Failed to generate embedding for chunk ${index}:`, error);
+          return {
+            id: `${id}_chunk_${index}`,
+            content: chunk,
+            embedding: [],
+            metadata: { index, knowledgeBaseId: id }
+          };
+        }
+      })
+    );
 
     // Store in vector store
     vectorStore[id] = { chunks: chunksWithEmbeddings };
@@ -353,26 +353,26 @@ export class KnowledgeService {
           continue;
         }
 
-        const concurrency = parseInt(process.env.EMBEDDING_CONCURRENCY || '4', 10);
-        const limit = Number.isFinite(concurrency) && concurrency > 0 ? concurrency : 4;
-        const chunksWithEmbeddings = await mapWithConcurrency(chunks, limit, async (chunk, index) => {
-          try {
-            const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-            return {
-              id: `${kb.id}_chunk_${index}`,
-              content: chunk,
-              embedding,
-              metadata: { index, knowledgeBaseId: kb.id }
-            };
-          } catch (error) {
-            return {
-              id: `${kb.id}_chunk_${index}`,
-              content: chunk,
-              embedding: [],
-              metadata: { index, knowledgeBaseId: kb.id }
-            };
-          }
-        });
+        const chunksWithEmbeddings = await Promise.all(
+          chunks.map(async (chunk, index) => {
+            try {
+              const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+              return {
+                id: `${kb.id}_chunk_${index}`,
+                content: chunk,
+                embedding,
+                metadata: { index, knowledgeBaseId: kb.id }
+              };
+            } catch (error) {
+              return {
+                id: `${kb.id}_chunk_${index}`,
+                content: chunk,
+                embedding: [],
+                metadata: { index, knowledgeBaseId: kb.id }
+              };
+            }
+          })
+        );
 
         vectorStore[kb.id] = { chunks: chunksWithEmbeddings };
         console.log(`Loaded knowledge base: ${kb.name}`);
