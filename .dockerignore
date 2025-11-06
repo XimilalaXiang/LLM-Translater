@@ -1,0 +1,15 @@
+# Global dockerignore for compose builds
+.git
+.gitignore
+**/node_modules
+**/dist
+**/.vite
+**/.cache
+*.log
+Dockerfile
+**/Dockerfile
+frontend/.env*
+backend/.env*
+uploads
+**/data/*.sqlite
+

@@ -215,3 +215,61 @@ API Key：sk-...
   - [ai-elements-vue](https://github.com/vuepont/ai-elements-vue)
 
 **License:** MIT
+
+---
+
+## 使用 Docker Compose 部署
+
+本项目提供一键容器化部署：使用 Nginx 提供前端静态站点并反向代理 `/api` 到后端容器；后端使用 SQLite，数据与上传目录通过卷持久化。
+
+### 前置要求
+- Docker 20+
+- Docker Compose v2（`docker compose` 子命令）
+
+### 目录结构（与部署相关）
+```
+docker-compose.yml
+backend/Dockerfile
+frontend/Dockerfile
+frontend/nginx.conf
+```
+
+### 启动
+```bash
+# 在项目根目录
+docker compose build
+docker compose up -d
+
+# 访问：
+http://localhost:8080
+```
+
+### 服务说明
+- 前端：Nginx 容器暴露 8080 端口；静态文件路径 `/usr/share/nginx/html`；`/api` 代理到 `backend:3000`。
+- 后端：Node.js 服务监听 3000；默认 CORS 允许 `http://localhost:8080`。
+- 数据持久化：
+  - SQLite 数据库：`volume backend-data → /app/data/database.sqlite`
+  - 上传目录：`volume backend-uploads → /app/uploads`
+
+### 常用操作
+```bash
+# 查看日志
+docker compose logs -f backend
+docker compose logs -f frontend
+
+# 停止/启动
+docker compose stop
+docker compose start
+docker compose down   # 仅移除容器，不删除卷
+
+# 清理卷（谨慎）
+docker compose down -v
+```
+
+### 环境变量（可在 docker-compose.yml 中覆盖）
+- `PORT`（后端端口，默认 3000）
+- `CORS_ORIGIN`（前端地址，默认 `http://localhost:8080`）
+- `DATABASE_PATH`（默认 `/app/data/database.sqlite`）
+- `UPLOAD_DIR`（默认 `/app/uploads`）
+- `MAX_FILE_SIZE`（默认 `10485760`）
+
