@@ -7,6 +7,8 @@ export interface ModelConfig {
   apiKey: string;
   modelId: string;
   systemPrompt: string;
+  ownerUserId?: string;
+  isPublic?: boolean;
   temperature?: number;
   maxTokens?: number;
   topP?: number;
@@ -90,6 +92,8 @@ export interface KnowledgeBase {
   fileSize: number;
   chunkCount: number;
   embeddingModelId: string;
+  ownerUserId?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -173,6 +177,8 @@ export interface DbModelConfig {
   api_key: string;
   model_id: string;
   system_prompt: string;
+  owner_user_id: string | null;
+  is_public: number;
   temperature: number | null;
   max_tokens: number | null;
   top_p: number | null;
@@ -195,6 +201,8 @@ export interface DbKnowledgeBase {
   file_size: number;
   chunk_count: number;
   embedding_model_id: string;
+  owner_user_id: string | null;
+  is_public: number;
   created_at: string;
   updated_at: string;
 }

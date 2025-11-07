@@ -37,7 +37,9 @@ const upload = multer({
 // Get all knowledge bases
 router.get('/', (req, res) => {
   try {
-    const knowledgeBases = knowledgeService.getAllKnowledgeBases();
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const knowledgeBases = knowledgeService.getAllKnowledgeBasesForUser(userId, isAdmin);
     const response: ApiResponse = {
       success: true,
       data: knowledgeBases
@@ -105,7 +107,8 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json(response);
     }
 
-    const knowledgeBase = await knowledgeService.createKnowledgeBase(dto, req.file);
+    const userId = (req as any).user?.id as string | undefined;
+    const knowledgeBase = await knowledgeService.createKnowledgeBase(dto, req.file, userId);
 
     const response: ApiResponse = {
       success: true,
@@ -127,7 +130,9 @@ router.post('/', upload.single('file'), async (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const success = knowledgeService.deleteKnowledgeBase(id);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const success = knowledgeService.deleteKnowledgeBase(id, userId, isAdmin);
 
     if (!success) {
       const response: ApiResponse = {
@@ -164,7 +169,9 @@ router.post('/search', async (req, res) => {
       return res.status(400).json(response);
     }
 
-    const results = await knowledgeService.search(dto);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const results = await knowledgeService.search(dto, userId, isAdmin);
 
     const response: ApiResponse = {
       success: true,

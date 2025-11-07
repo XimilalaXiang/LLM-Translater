@@ -72,6 +72,8 @@ export class KnowledgeService {
       fileSize: row.file_size,
       chunkCount: row.chunk_count,
       embeddingModelId: row.embedding_model_id,
+      ownerUserId: row.owner_user_id || undefined,
+      isPublic: row.is_public === 1,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     };
@@ -80,9 +82,13 @@ export class KnowledgeService {
   /**
    * Get all knowledge bases
    */
-  getAllKnowledgeBases(): KnowledgeBase[] {
-    const stmt = db.prepare('SELECT * FROM knowledge_bases ORDER BY created_at DESC');
-    const rows = stmt.all() as DbKnowledgeBase[];
+  getAllKnowledgeBasesForUser(userId?: string, isAdmin?: boolean): KnowledgeBase[] {
+    let rows: DbKnowledgeBase[] = [];
+    if (!userId) {
+      rows = db.prepare('SELECT * FROM knowledge_bases ORDER BY created_at DESC').all() as DbKnowledgeBase[];
+    } else {
+      rows = db.prepare('SELECT * FROM knowledge_bases WHERE (owner_user_id = ? OR is_public = 1) ORDER BY created_at DESC').all(userId) as DbKnowledgeBase[];
+    }
     return rows.map(row => this.dbToKnowledgeBase(row));
   }
 
@@ -101,7 +107,7 @@ export class KnowledgeService {
   async createKnowledgeBase(
     dto: CreateKnowledgeBaseDto,
     file: Express.Multer.File
-  ): Promise<KnowledgeBase> {
+  , ownerUserId?: string): Promise<KnowledgeBase> {
     const id = uuidv4();
     const now = new Date().toISOString();
 
@@ -148,8 +154,9 @@ export class KnowledgeService {
     const stmt = db.prepare(`
       INSERT INTO knowledge_bases (
         id, name, description, file_type, file_name, file_path,
-        file_size, chunk_count, embedding_model_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        file_size, chunk_count, embedding_model_id, owner_user_id, is_public,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -162,6 +169,8 @@ export class KnowledgeService {
       file.size,
       chunks.length,
       dto.embeddingModelId,
+      ownerUserId ?? null,
+      0,
       now,
       now
     );
@@ -172,9 +181,13 @@ export class KnowledgeService {
   /**
    * Delete knowledge base
    */
-  deleteKnowledgeBase(id: string): boolean {
+  deleteKnowledgeBase(id: string, currentUserId?: string, isAdmin?: boolean): boolean {
     const kb = this.getKnowledgeBaseById(id);
     if (!kb) return false;
+    if (currentUserId) {
+      const isOwner = kb.ownerUserId === currentUserId;
+      if (!isOwner && !isAdmin) throw new Error('Permission denied');
+    }
 
     // Delete file
     try {
@@ -198,56 +211,58 @@ export class KnowledgeService {
   /**
    * Search knowledge base
    */
-  async search(dto: SearchKnowledgeDto): Promise<SearchResult[]> {
+  async search(dto: SearchKnowledgeDto, userId?: string, isAdmin?: boolean): Promise<SearchResult[]> {
     const { query, knowledgeBaseIds, topK = 5 } = dto;
 
     // Get knowledge bases to search
     let kbIds: string[];
+    const accessible = this.getAllKnowledgeBasesForUser(userId, isAdmin);
+    const accessibleSet = new Set(accessible.map(k => k.id));
     if (knowledgeBaseIds && knowledgeBaseIds.length > 0) {
-      kbIds = knowledgeBaseIds;
+      kbIds = knowledgeBaseIds.filter(id => accessibleSet.has(id));
     } else {
-      const allKbs = this.getAllKnowledgeBases();
-      kbIds = allKbs.map(kb => kb.id);
+      kbIds = [...accessibleSet];
     }
 
     if (kbIds.length === 0) {
       return [];
     }
 
-    // Get first embedding model to generate query embedding
-    const embeddingModels = modelService.getEnabledModelsByStage('embedding');
-    if (embeddingModels.length === 0) {
-      throw new Error('No embedding model available');
+    // Group KBs by their embedding model to ensure vector space一致
+    const kbByModel = new Map<string, string[]>();
+    for (const id of kbIds) {
+      const kb = this.getKnowledgeBaseById(id);
+      if (!kb) continue;
+      const list = kbByModel.get(kb.embeddingModelId) || [];
+      list.push(id);
+      kbByModel.set(kb.embeddingModelId, list);
     }
 
-    const embeddingModel = embeddingModels[0];
-
-    // Generate query embedding
-    const queryEmbedding = await llmService.generateEmbedding(embeddingModel, query);
-
-    // Search in each knowledge base
+    // Search in each embedding model group
     const allResults: Array<SearchResult & { score: number }> = [];
 
-    for (const kbId of kbIds) {
-      const kb = this.getKnowledgeBaseById(kbId);
-      if (!kb) continue;
+    for (const [modelId, ids] of kbByModel.entries()) {
+      const model = modelService.getModelByIdForUser(modelId, userId, isAdmin);
+      if (!model) continue;
+      const queryEmbedding = await llmService.generateEmbedding(model, query);
 
-      const store = vectorStore[kbId];
-      if (!store) continue;
-
-      // Calculate similarity for each chunk
-      for (const chunk of store.chunks) {
-        if (chunk.embedding.length === 0) continue;
-
-        const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
-        allResults.push({
-          id: chunk.id,
-          content: chunk.content,
-          similarity,
-          metadata: chunk.metadata,
-          knowledgeBaseName: kb.name,
-          score: similarity
-        });
+      for (const kbId of ids) {
+        const kb = this.getKnowledgeBaseById(kbId);
+        if (!kb) continue;
+        const store = vectorStore[kbId];
+        if (!store) continue;
+        for (const chunk of store.chunks) {
+          if (chunk.embedding.length === 0) continue;
+          const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
+          allResults.push({
+            id: chunk.id,
+            content: chunk.content,
+            similarity,
+            metadata: chunk.metadata,
+            knowledgeBaseName: kb.name,
+            score: similarity
+          });
+        }
       }
     }
 
@@ -323,7 +338,7 @@ export class KnowledgeService {
    */
   async loadExistingKnowledgeBases(): Promise<void> {
     console.log('Loading existing knowledge bases...');
-    const kbs = this.getAllKnowledgeBases();
+    const kbs = this.getAllKnowledgeBasesForUser();
 
     for (const kb of kbs) {
       // Check if already loaded

@@ -28,6 +28,8 @@ export class ModelService {
       apiKey,
       modelId: row.model_id,
       systemPrompt: row.system_prompt,
+      ownerUserId: row.owner_user_id || undefined,
+      isPublic: row.is_public === 1,
       temperature: row.temperature ?? undefined,
       maxTokens: row.max_tokens ?? undefined,
       topP: row.top_p ?? undefined,
@@ -41,24 +43,39 @@ export class ModelService {
     };
   }
 
-  // Get all model configs
-  getAllModels(): ModelConfig[] {
-    const stmt = db.prepare('SELECT * FROM model_configs ORDER BY stage, order_num, created_at');
-    const rows = stmt.all() as DbModelConfig[];
+  // helper: scope clause for user
+  private scopeWhere(userId?: string, isAdmin?: boolean): { clause: string; params: any[] } {
+    if (!userId) {
+      // auth disabled scenario => return all
+      return { clause: '1=1', params: [] };
+    }
+    if (isAdmin) {
+      // admin sees own + public; not all by default
+      return { clause: '(owner_user_id = ? OR is_public = 1)', params: [userId] };
+    }
+    return { clause: '(owner_user_id = ? OR is_public = 1)', params: [userId] };
+  }
+
+  getAllModelsForUser(userId?: string, isAdmin?: boolean): ModelConfig[] {
+    const scope = this.scopeWhere(userId, isAdmin);
+    const stmt = db.prepare(`SELECT * FROM model_configs WHERE ${scope.clause} ORDER BY stage, order_num, created_at`);
+    const rows = stmt.all(...scope.params) as DbModelConfig[];
     return rows.map(row => this.dbToModel(row));
   }
 
   // Get models by stage
-  getModelsByStage(stage: string): ModelConfig[] {
-    const stmt = db.prepare('SELECT * FROM model_configs WHERE stage = ? ORDER BY order_num, created_at');
-    const rows = stmt.all(stage) as DbModelConfig[];
+  getModelsByStageForUser(stage: string, userId?: string, isAdmin?: boolean): ModelConfig[] {
+    const scope = this.scopeWhere(userId, isAdmin);
+    const stmt = db.prepare(`SELECT * FROM model_configs WHERE stage = ? AND ${scope.clause} ORDER BY order_num, created_at`);
+    const rows = stmt.all(stage, ...scope.params) as DbModelConfig[];
     return rows.map(row => this.dbToModel(row));
   }
 
   // Get enabled models by stage
-  getEnabledModelsByStage(stage: string): ModelConfig[] {
-    const stmt = db.prepare('SELECT * FROM model_configs WHERE stage = ? AND enabled = 1 ORDER BY order_num, created_at');
-    const rows = stmt.all(stage) as DbModelConfig[];
+  getEnabledModelsByStageForUser(stage: string, userId?: string, isAdmin?: boolean): ModelConfig[] {
+    const scope = this.scopeWhere(userId, isAdmin);
+    const stmt = db.prepare(`SELECT * FROM model_configs WHERE stage = ? AND enabled = 1 AND ${scope.clause} ORDER BY order_num, created_at`);
+    const rows = stmt.all(stage, ...scope.params) as DbModelConfig[];
     return rows.map(row => this.dbToModel(row));
   }
 
@@ -68,9 +85,18 @@ export class ModelService {
     const row = stmt.get(id) as DbModelConfig | undefined;
     return row ? this.dbToModel(row) : null;
   }
+  getModelByIdForUser(id: string, userId?: string, isAdmin?: boolean): ModelConfig | null {
+    const model = this.getModelById(id);
+    if (!model) return null;
+    if (!userId) return model; // auth disabled
+    if (model.ownerUserId === userId) return model;
+    if (model.isPublic) return model;
+    if (isAdmin) return model;
+    return null;
+  }
 
   // Create model config
-  createModel(dto: CreateModelConfigDto): ModelConfig {
+  createModel(dto: CreateModelConfigDto, ownerUserId?: string): ModelConfig {
     const id = uuidv4();
     const now = new Date().toISOString();
     const storedApiKey = dto.apiKey ? encryptSecret(dto.apiKey) : '';
@@ -78,9 +104,10 @@ export class ModelService {
     const stmt = db.prepare(`
       INSERT INTO model_configs (
         id, name, stage, api_endpoint, api_key, model_id, system_prompt,
+        owner_user_id, is_public,
         temperature, max_tokens, top_p, frequency_penalty, presence_penalty,
         custom_params, enabled, order_num, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -91,6 +118,8 @@ export class ModelService {
       storedApiKey,
       dto.modelId,
       dto.systemPrompt ?? '',
+      ownerUserId ?? null,
+      0,
       dto.temperature ?? null,
       dto.maxTokens ?? null,
       dto.topP ?? null,
@@ -107,9 +136,15 @@ export class ModelService {
   }
 
   // Update model config
-  updateModel(dto: UpdateModelConfigDto): ModelConfig | null {
+  updateModel(dto: UpdateModelConfigDto, currentUserId?: string, isAdmin?: boolean): ModelConfig | null {
     const existing = this.getModelById(dto.id);
     if (!existing) return null;
+    if (currentUserId) {
+      const isOwner = existing.ownerUserId === currentUserId;
+      if (!isOwner && !isAdmin) {
+        throw new Error('Permission denied');
+      }
+    }
 
     const now = new Date().toISOString();
     const updates: string[] = [];
@@ -187,19 +222,31 @@ export class ModelService {
   }
 
   // Delete model config
-  deleteModel(id: string): boolean {
+  deleteModel(id: string, currentUserId?: string, isAdmin?: boolean): boolean {
+    if (currentUserId) {
+      const existing = this.getModelById(id);
+      if (!existing) return false;
+      const isOwner = existing.ownerUserId === currentUserId;
+      if (!isOwner && !isAdmin) throw new Error('Permission denied');
+    }
     const stmt = db.prepare('DELETE FROM model_configs WHERE id = ?');
     const result = stmt.run(id);
     return result.changes > 0;
   }
 
   // Reorder models
-  reorderModels(stage: string, modelIds: string[]): void {
+  reorderModels(stage: string, modelIds: string[], currentUserId?: string, isAdmin?: boolean): void {
     const updateStmt = db.prepare('UPDATE model_configs SET order_num = ?, updated_at = ? WHERE id = ?');
     const now = new Date().toISOString();
 
     const transaction = db.transaction(() => {
       modelIds.forEach((id, index) => {
+        if (currentUserId) {
+          const m = this.getModelById(id);
+          if (!m) return;
+          const isOwner = m.ownerUserId === currentUserId;
+          if (!isOwner && !isAdmin) return; // skip unauthorized ids
+        }
         updateStmt.run(index, now, id);
       });
     });

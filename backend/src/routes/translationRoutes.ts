@@ -133,7 +133,8 @@ router.post('/progress/start', async (req, res) => {
     const stage1Results: TranslationStageResult[] = await translationService.runStage1(
       request.sourceText,
       knowledgeContext,
-      request.modelIds?.translation
+      request.modelIds?.translation,
+      (req as any).user?.id
     );
 
     const partial: Partial<TranslationResponse> & { knowledgeContext?: string[] } = {
@@ -174,7 +175,8 @@ router.post('/progress/review', async (req, res) => {
       sourceText,
       stage1Results,
       knowledgeContext || [],
-      modelIds?.review
+      modelIds?.review,
+      (req as any).user?.id
     );
 
     const response: ApiResponse = { success: true, data: { stage2Results } };
@@ -209,7 +211,8 @@ router.post('/progress/synthesis', async (req, res) => {
       stage1Results,
       stage2Results || [],
       knowledgeContext || [],
-      modelIds?.synthesis
+      modelIds?.synthesis,
+      (req as any).user?.id
     );
 
     const userId = (req as any).user?.id as string | undefined;

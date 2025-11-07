@@ -27,6 +27,8 @@ export function initDatabase() {
       api_key TEXT NOT NULL,
       model_id TEXT NOT NULL,
       system_prompt TEXT NOT NULL,
+      owner_user_id TEXT,
+      is_public INTEGER NOT NULL DEFAULT 0,
       -- whether streaming is enabled for this model (0/1)
       stream_enabled INTEGER DEFAULT 0,
       temperature REAL,
@@ -48,6 +50,8 @@ export function initDatabase() {
   } catch (e) {
     // ignore if column already exists
   }
+  try { db.exec(`ALTER TABLE model_configs ADD COLUMN owner_user_id TEXT`); } catch (e) {}
+  try { db.exec(`ALTER TABLE model_configs ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0`); } catch (e) {}
 
   // Knowledge base table
   db.exec(`
@@ -61,11 +65,15 @@ export function initDatabase() {
       file_size INTEGER NOT NULL,
       chunk_count INTEGER NOT NULL DEFAULT 0,
       embedding_model_id TEXT NOT NULL,
+      owner_user_id TEXT,
+      is_public INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (embedding_model_id) REFERENCES model_configs(id) ON DELETE RESTRICT
     )
   `);
+  try { db.exec(`ALTER TABLE knowledge_bases ADD COLUMN owner_user_id TEXT`); } catch (e) {}
+  try { db.exec(`ALTER TABLE knowledge_bases ADD COLUMN is_public INTEGER NOT NULL DEFAULT 0`); } catch (e) {}
 
   // Translation history table (will be extended with user_id)
   db.exec(`
@@ -118,7 +126,11 @@ export function initDatabase() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_model_configs_stage ON model_configs(stage);
     CREATE INDEX IF NOT EXISTS idx_model_configs_enabled ON model_configs(enabled);
+    CREATE INDEX IF NOT EXISTS idx_model_configs_owner_stage ON model_configs(owner_user_id, stage);
+    CREATE INDEX IF NOT EXISTS idx_model_configs_is_public ON model_configs(is_public);
     CREATE INDEX IF NOT EXISTS idx_knowledge_bases_embedding_model ON knowledge_bases(embedding_model_id);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_bases_owner ON knowledge_bases(owner_user_id);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_bases_is_public ON knowledge_bases(is_public);
     CREATE INDEX IF NOT EXISTS idx_translation_history_created_at ON translation_history(created_at);
     CREATE INDEX IF NOT EXISTS idx_translation_history_user_id ON translation_history(user_id);
     CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);

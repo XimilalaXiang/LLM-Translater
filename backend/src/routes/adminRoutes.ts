@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { authService } from '../services/authService';
 import { db } from '../database/schema';
 import { requireAdmin } from '../utils/authMiddleware';
+import { modelService } from '../services/modelService';
+import { knowledgeService } from '../services/knowledgeService';
 
 const router = Router();
 
@@ -73,5 +75,36 @@ router.post('/reset-models', (req, res, next) => {
 });
 
 export default router;
+
+// Share toggles for admin-owned resources
+router.post('/models/:id/share', requireAdmin, (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string;
+    const { id } = req.params;
+    const { isPublic } = req.body as { isPublic?: boolean };
+    const m = modelService.getModelById(id);
+    if (!m) return res.status(404).json({ success: false, error: 'Model not found' });
+    if (m.ownerUserId !== userId) return res.status(403).json({ success: false, error: 'Only owner can share' });
+    db.prepare('UPDATE model_configs SET is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(isPublic ? 1 : 0, id);
+    return res.json({ success: true });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e?.message || 'Failed' });
+  }
+});
+
+router.post('/knowledge/:id/share', requireAdmin, (req, res) => {
+  try {
+    const userId = (req as any).user?.id as string;
+    const { id } = req.params;
+    const { isPublic } = req.body as { isPublic?: boolean };
+    const kb = knowledgeService.getKnowledgeBaseById(id);
+    if (!kb) return res.status(404).json({ success: false, error: 'Knowledge base not found' });
+    if (kb.ownerUserId !== userId) return res.status(403).json({ success: false, error: 'Only owner can share' });
+    db.prepare('UPDATE knowledge_bases SET is_public = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(isPublic ? 1 : 0, id);
+    return res.json({ success: true });
+  } catch (e: any) {
+    return res.status(500).json({ success: false, error: e?.message || 'Failed' });
+  }
+});
 
 

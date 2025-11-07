@@ -13,7 +13,9 @@ function sanitizeModel(model: ModelConfig) {
 // Get all models
 router.get('/', (req, res) => {
   try {
-    const models = modelService.getAllModels().map(sanitizeModel);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const models = modelService.getAllModelsForUser(userId, isAdmin).map(sanitizeModel);
     const response: ApiResponse = {
       success: true,
       data: models
@@ -32,7 +34,9 @@ router.get('/', (req, res) => {
 router.get('/stage/:stage', (req, res) => {
   try {
     const { stage } = req.params;
-    const models = modelService.getModelsByStage(stage).map(sanitizeModel);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const models = modelService.getModelsByStageForUser(stage, userId, isAdmin).map(sanitizeModel);
     const response: ApiResponse = {
       success: true,
       data: models
@@ -51,7 +55,9 @@ router.get('/stage/:stage', (req, res) => {
 router.get('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const model = modelService.getModelById(id);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const model = modelService.getModelByIdForUser(id, userId, isAdmin);
 
     if (!model) {
       const response: ApiResponse = {
@@ -79,7 +85,8 @@ router.get('/:id', (req, res) => {
 router.post('/', (req, res) => {
   try {
     const dto: CreateModelConfigDto = req.body;
-    const model = modelService.createModel(dto);
+    const userId = (req as any).user?.id as string | undefined;
+    const model = modelService.createModel(dto, userId);
     const response: ApiResponse = {
       success: true,
       data: sanitizeModel(model),
@@ -100,7 +107,9 @@ router.put('/:id', (req, res) => {
   try {
     const { id } = req.params;
     const dto: UpdateModelConfigDto = { ...req.body, id };
-    const model = modelService.updateModel(dto);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const model = modelService.updateModel(dto, userId, isAdmin);
 
     if (!model) {
       const response: ApiResponse = {
@@ -129,7 +138,9 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   try {
     const { id } = req.params;
-    const success = modelService.deleteModel(id);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const success = modelService.deleteModel(id, userId, isAdmin);
 
     if (!success) {
       const response: ApiResponse = {
@@ -157,7 +168,9 @@ router.delete('/:id', (req, res) => {
 router.post('/:id/test', async (req, res) => {
   try {
     const { id } = req.params;
-    const model = modelService.getModelById(id);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    const model = modelService.getModelByIdForUser(id, userId, isAdmin);
 
     if (!model) {
       const response: ApiResponse = {
@@ -198,7 +211,9 @@ router.post('/stage/:stage/reorder', (req, res) => {
       return res.status(400).json(response);
     }
 
-    modelService.reorderModels(stage, modelIds);
+    const userId = (req as any).user?.id as string | undefined;
+    const isAdmin = (req as any).user?.role === 'admin';
+    modelService.reorderModels(stage, modelIds, userId, isAdmin);
 
     const response: ApiResponse = {
       success: true,

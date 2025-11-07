@@ -252,32 +252,32 @@ export class LLMService {
       let lastError: any = null;
       for (const endpoint of endpointsToTry) {
         try {
-          const response = await axios.post(
+      const response = await axios.post(
             endpoint,
-            {
-              model: config.modelId,
-              input: text
-            },
-            this.buildAxiosOptions(
+        {
+          model: config.modelId,
+          input: text
+        },
+        this.buildAxiosOptions(
               endpoint,
-              {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${config.apiKey}`
-              },
-              60000
-            )
-          );
+        {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${config.apiKey}`
+          },
+          60000
+        )
+      );
 
           // Extract embedding from response (OpenAI/compatible or generic)
           if (response.data?.data && Array.isArray(response.data.data) && response.data.data[0]?.embedding) {
             return response.data.data[0].embedding as number[];
-          }
+      }
           if (Array.isArray(response.data) && response.data[0]?.embedding) {
             return response.data[0].embedding as number[];
           }
           if (response.data?.embedding) {
             return response.data.embedding as number[];
-          }
+      }
 
           // If format not recognized, continue to next candidate
           lastError = new Error('Invalid embedding response format');

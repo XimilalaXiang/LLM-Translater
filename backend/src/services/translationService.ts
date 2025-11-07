@@ -35,7 +35,8 @@ export class TranslationService {
       const stage1Results = await this.executeStage1(
         request.sourceText,
         knowledgeContext,
-        request.modelIds?.translation
+        request.modelIds?.translation,
+        userId
       );
 
       // Stage 2: Review and Evaluation
@@ -44,7 +45,8 @@ export class TranslationService {
         request.sourceText,
         stage1Results,
         knowledgeContext,
-        request.modelIds?.review
+        request.modelIds?.review,
+        userId
       );
 
       // Stage 3: Synthesis Translation
@@ -54,7 +56,8 @@ export class TranslationService {
         stage1Results,
         stage2Results,
         knowledgeContext,
-        request.modelIds?.synthesis
+        request.modelIds?.synthesis,
+        userId
       );
 
       // Select the best final translation (use the first synthesis result)
@@ -87,18 +90,20 @@ export class TranslationService {
   async runStage1(
     sourceText: string,
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<TranslationStageResult[]> {
-    return this.executeStage1(sourceText, knowledgeContext, modelIds);
+    return this.executeStage1(sourceText, knowledgeContext, modelIds, userId);
   }
 
   async runStage2(
     sourceText: string,
     stage1Results: TranslationStageResult[],
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<ReviewResult[]> {
-    return this.executeStage2(sourceText, stage1Results, knowledgeContext, modelIds);
+    return this.executeStage2(sourceText, stage1Results, knowledgeContext, modelIds, userId);
   }
 
   async runStage3(
@@ -106,9 +111,10 @@ export class TranslationService {
     stage1Results: TranslationStageResult[],
     stage2Results: ReviewResult[],
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<TranslationStageResult[]> {
-    return this.executeStage3(sourceText, stage1Results, stage2Results, knowledgeContext, modelIds);
+    return this.executeStage3(sourceText, stage1Results, stage2Results, knowledgeContext, modelIds, userId);
   }
 
   finalizeAndSave(
@@ -144,10 +150,11 @@ export class TranslationService {
   private async executeStage1(
     sourceText: string,
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<TranslationStageResult[]> {
     // Get enabled translation models
-    let models = modelService.getEnabledModelsByStage('translation');
+    let models = modelService.getEnabledModelsByStageForUser('translation', userId);
 
     // Filter by specified model IDs if provided
     if (modelIds && modelIds.length > 0) {
@@ -207,10 +214,11 @@ export class TranslationService {
     sourceText: string,
     stage1Results: TranslationStageResult[],
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<ReviewResult[]> {
     // Get enabled review models
-    let models = modelService.getEnabledModelsByStage('review');
+    let models = modelService.getEnabledModelsByStageForUser('review', userId);
 
     if (modelIds && modelIds.length > 0) {
       models = models.filter(m => modelIds.includes(m.id));
@@ -277,10 +285,11 @@ export class TranslationService {
     stage1Results: TranslationStageResult[],
     stage2Results: ReviewResult[],
     knowledgeContext: string[],
-    modelIds?: string[]
+    modelIds?: string[],
+    userId?: string
   ): Promise<TranslationStageResult[]> {
     // Get enabled synthesis models
-    let models = modelService.getEnabledModelsByStage('synthesis');
+    let models = modelService.getEnabledModelsByStageForUser('synthesis', userId);
 
     if (modelIds && modelIds.length > 0) {
       models = models.filter(m => modelIds.includes(m.id));
