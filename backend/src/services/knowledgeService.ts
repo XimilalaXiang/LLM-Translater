@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import pdf from 'pdf-parse';
 import mammoth from 'mammoth';
+import { logWarning } from '../utils/logger';
 // Simple concurrency limiter to avoid ESM-only deps in CJS runtime
 async function mapWithConcurrency<T, R>(
   items: T[],
@@ -266,7 +267,15 @@ export class KnowledgeService {
     for (const [modelId, ids] of kbByModel.entries()) {
       const model = modelService.getModelByIdForUser(modelId, userId, isAdmin);
       if (!model) continue;
-      const queryEmbedding = await llmService.generateEmbedding(model, query);
+      let queryEmbedding: number[] | null = null;
+      try {
+        queryEmbedding = await llmService.generateEmbedding(model, query);
+      } catch (e: any) {
+        // 如果该嵌入模型生成查询向量失败，跳过该模型组，避免 500
+        const msg = e?.message || String(e);
+        logWarning(`知识库检索跳过模型组 [${model.name}]，原因：查询嵌入失败：${msg}`);
+        continue;
+      }
 
       for (const kbId of ids) {
       const kb = this.getKnowledgeBaseById(kbId);
@@ -275,7 +284,7 @@ export class KnowledgeService {
       if (!store) continue;
       for (const chunk of store.chunks) {
         if (chunk.embedding.length === 0) continue;
-        const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
+        const similarity = this.cosineSimilarity(queryEmbedding!, chunk.embedding);
         allResults.push({
           id: chunk.id,
           content: chunk.content,
