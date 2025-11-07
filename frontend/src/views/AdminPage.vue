@@ -44,12 +44,49 @@
     <button @click="resetModels" class="px-4 py-2 border-2 border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition-colors">清空模型配置</button>
     <button @click="cleanupLegacy" class="ml-3 px-4 py-2 border-2 border-red-600 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition-colors">清理旧共享与无归属数据</button>
   </div>
+
+  <div class="p-4 border border-gray-300 dark:border-gray-700 rounded-md">
+    <h3 class="text-lg font-semibold mb-3">我的模型共享</h3>
+    <div v-if="myModels.length === 0" class="text-sm text-gray-500">暂无模型或您不是拥有者。</div>
+    <div v-for="m in myModels" :key="m.id" class="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+      <div>
+        <div class="font-medium text-sm">{{ m.name }}</div>
+        <div class="text-xs text-gray-500">阶段：{{ m.stage }}</div>
+      </div>
+      <label class="inline-flex items-center cursor-pointer text-sm">
+        <input type="checkbox" class="sr-only" :checked="m.isPublic" @change="() => toggleModelShare(m)" />
+        <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full relative">
+          <div :class="['absolute top-0.5 left-0.5 w-5 h-5 bg-white dark:bg-black rounded-full transition-transform', m.isPublic ? 'translate-x-5' : '']"></div>
+        </div>
+        <span class="ml-2">{{ m.isPublic ? '已共享' : '未共享' }}</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="p-4 border border-gray-300 dark:border-gray-700 rounded-md">
+    <h3 class="text-lg font-semibold mb-3">我的知识库共享</h3>
+    <div v-if="myKbs.length === 0" class="text-sm text-gray-500">暂无知识库或您不是拥有者。</div>
+    <div v-for="k in myKbs" :key="k.id" class="flex items-center justify-between py-2 border-b border-gray-200 dark:border-gray-700">
+      <div>
+        <div class="font-medium text-sm">{{ k.name }}</div>
+        <div class="text-xs text-gray-500">文件：{{ k.fileName }}</div>
+      </div>
+      <label class="inline-flex items-center cursor-pointer text-sm">
+        <input type="checkbox" class="sr-only" :checked="k.isPublic" @change="() => toggleKbShare(k)" />
+        <div class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full relative">
+          <div :class="['absolute top-0.5 left-0.5 w-5 h-5 bg-white dark:bg-black rounded-full transition-transform', k.isPublic ? 'translate-x-5' : '']"></div>
+        </div>
+        <span class="ml-2">{{ k.isPublic ? '已共享' : '未共享' }}</span>
+      </label>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAuthStore } from '@/stores/authStore';
-import { adminApi } from '@/api';
+import { adminApi, modelApi, knowledgeApi } from '@/api';
+import type { ModelConfig, KnowledgeBase } from '@/types';
 
 const store = useAuthStore();
 const username = ref('');
@@ -57,9 +94,12 @@ const password = ref('');
 const message = ref('');
 const messageType = ref<'ok' | 'err'>('ok');
 const deleteKB = ref(true);
+const myModels = ref<ModelConfig[]>([]);
+const myKbs = ref<KnowledgeBase[]>([]);
 
 onMounted(async () => {
   await store.fetchStatus();
+  await refreshLists();
 });
 
 async function onToggleAuth(e: Event) {
@@ -89,6 +129,30 @@ async function resetModels() {
   } catch (e: any) {
     message.value = e?.message || '清空失败';
     messageType.value = 'err';
+  }
+}
+async function refreshLists() {
+  try {
+    const [modelsRes, kbsRes] = await Promise.all([modelApi.getAll(), knowledgeApi.getAll()]);
+    const userId = store.user?.id;
+    const allModels = (modelsRes as any)?.data || [];
+    const allKbs = (kbsRes as any)?.data || [];
+    myModels.value = userId ? allModels.filter((m: any) => m.ownerUserId === userId) : [];
+    myKbs.value = userId ? allKbs.filter((k: any) => k.ownerUserId === userId) : [];
+  } catch {}
+}
+async function toggleModelShare(m: ModelConfig) {
+  const next = !m.isPublic;
+  const res = await adminApi.shareModel(m.id, next);
+  if ((res as any)?.success) {
+    m.isPublic = next;
+  }
+}
+async function toggleKbShare(k: KnowledgeBase) {
+  const next = !k.isPublic;
+  const res = await adminApi.shareKnowledge(k.id, next);
+  if ((res as any)?.success) {
+    k.isPublic = next;
   }
 }
 async function cleanupLegacy() {

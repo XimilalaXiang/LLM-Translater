@@ -8,6 +8,8 @@ export interface ModelConfig {
   modelId: string;
   systemPrompt: string;
   hasApiKey?: boolean; // whether the server has a stored (encrypted) key
+  ownerUserId?: string;
+  isPublic?: boolean;
   temperature?: number;
   maxTokens?: number;
   topP?: number;
@@ -100,6 +102,8 @@ export interface KnowledgeBase {
   fileSize: number;
   chunkCount: number;
   embeddingModelId: string;
+  ownerUserId?: string;
+  isPublic?: boolean;
   createdAt: string;
   updatedAt: string;
 }

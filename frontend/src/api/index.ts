@@ -97,7 +97,9 @@ export const adminApi = {
   updateSettings: (authEnabled: boolean) => api.post('/admin/settings', { authEnabled }),
   bootstrap: (username: string, password: string) => api.post('/admin/bootstrap', { username, password }),
   resetModels: (deleteKnowledgeBases = true) => api.post('/admin/reset-models', { deleteKnowledgeBases }),
-  cleanupLegacy: () => api.post('/admin/cleanup-legacy', {})
+  cleanupLegacy: () => api.post('/admin/cleanup-legacy', {}),
+  shareModel: (id: string, isPublic: boolean) => api.post(`/admin/models/${id}/share`, { isPublic }),
+  shareKnowledge: (id: string, isPublic: boolean) => api.post(`/admin/knowledge/${id}/share`, { isPublic })
 };
 
 // Health check
