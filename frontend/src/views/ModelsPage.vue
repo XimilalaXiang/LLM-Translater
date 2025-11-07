@@ -54,14 +54,14 @@
               </span>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 text-sm">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span class="text-gray-500 dark:text-gray-400">API端点:</span>
-                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.apiEndpoint }}</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200 break-all">{{ model.apiEndpoint }}</span>
               </div>
               <div>
                 <span class="text-gray-500 dark:text-gray-400">模型ID:</span>
-                <span class="ml-2 text-gray-800 dark:text-gray-200">{{ model.modelId }}</span>
+                <span class="ml-2 text-gray-800 dark:text-gray-200 break-all">{{ model.modelId }}</span>
               </div>
               <div v-if="model.stage !== 'embedding'">
                 <span class="text-gray-500 dark:text-gray-400">温度:</span>
