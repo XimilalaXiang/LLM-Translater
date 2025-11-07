@@ -39,7 +39,7 @@
         :key="model.id"
         class="border-2 border-gray-200 dark:border-gray-700 rounded-xl p-6 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
       >
-        <div class="flex items-start justify-between">
+        <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="flex-1">
             <div class="flex items-center space-x-3 mb-3">
               <h3 class="text-lg font-bold">{{ model.name }}</h3>
@@ -79,8 +79,8 @@
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="flex items-center space-x-2 ml-4">
+          <!-- Actions: desktop -->
+          <div class="hidden sm:flex items-center space-x-2 ml-4 shrink-0">
             <button
               @click="handleTest(model.id)"
               class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-black dark:hover:border-white transition-colors"
@@ -106,6 +106,16 @@
             >
               删除
             </button>
+          </div>
+          <!-- Actions: mobile menu -->
+          <div class="relative sm:hidden ml-2 shrink-0">
+            <button @click="toggleMenu(model.id)" class="px-3 py-1 text-sm border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-black dark:hover:border-white transition-colors">操作</button>
+            <div v-if="openMenu === model.id" class="absolute right-0 mt-2 w-40 z-50 border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
+              <button @click="handleTest(model.id); toggleMenu()" :disabled="testing === model.id" class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 rounded-t-lg">{{ testing === model.id ? '测试中...' : '测试' }}</button>
+              <button @click="handleToggle(model.id); toggleMenu()" class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">{{ model.enabled ? '禁用' : '启用' }}</button>
+              <button @click="handleEdit(model); toggleMenu()" class="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800">编辑</button>
+              <button @click="handleDelete(model.id); toggleMenu()" class="block w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-b-lg">删除</button>
+            </div>
           </div>
         </div>
       </div>
@@ -232,6 +242,9 @@
         </div>
       </div>
     </div>
+
+    <!-- mobile menu backdrop -->
+    <div v-if="openMenu" class="fixed inset-0 z-40 sm:hidden" @click="openMenu = null"></div>
   </div>
 </template>
 
@@ -256,6 +269,7 @@ const currentStage = ref<'translation' | 'review' | 'synthesis' | 'embedding'>('
 const showCreateModal = ref(false);
 const editingModel = ref<ModelConfig | null>(null);
 const testing = ref<string | null>(null);
+const openMenu = ref<string | null>(null);
 
 const formData = ref<CreateModelConfigDto>({
   name: '',
@@ -353,6 +367,10 @@ const handleTest = async (id: string) => {
     testing.value = null;
   }
 };
+
+function toggleMenu(id?: string) {
+  openMenu.value = openMenu.value === id ? null : (id ?? null);
+}
 
 const closeModal = () => {
   showCreateModal.value = false;
