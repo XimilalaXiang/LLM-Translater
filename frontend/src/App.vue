@@ -1,7 +1,7 @@
 <template>
   <div class="app min-h-screen bg-white dark:bg-black text-black dark:text-gray-100">
     <!-- Header Navigation -->
-    <header class="border-b border-gray-300 dark:border-gray-700">
+    <header class="border-b border-gray-300 dark:border-gray-700 hidden sm:block">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
           <div class="flex items-center space-x-8">
@@ -60,15 +60,17 @@
     </header>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-20 sm:pb-8">
       <router-view />
     </main>
+    <MobileTabBar class="sm:hidden" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
+import MobileTabBar from '@/components/MobileTabBar.vue';
 import { useModelStore } from '@/stores/modelStore';
 import { useKnowledgeStore } from '@/stores/knowledgeStore';
 import { useAuthStore } from '@/stores/authStore';
