@@ -58,12 +58,12 @@
           >
             {{ kb.enabled === false ? '启用' : '禁用' }}
           </button>
-          <button
-            @click="handleDelete(kb.id)"
+        <button
+          @click="handleDelete(kb.id)"
             class="flex-1 px-3 py-2 text-sm border-2 border-red-300 text-red-600 rounded-lg hover:border-red-500 transition-colors"
-          >
-            删除
-          </button>
+        >
+          删除
+        </button>
         </div>
       </div>
 

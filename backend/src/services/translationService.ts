@@ -4,6 +4,7 @@ import { llmService } from './llmService';
 import { knowledgeService } from './knowledgeService';
 import { db } from '../database/schema';
 import { authService } from './authService';
+import { logError, logInfo, logWarning } from '../utils/logger';
 import type {
   TranslationRequest,
   TranslationResponse,
@@ -79,8 +80,11 @@ export class TranslationService {
       // Save to history (bind user when auth enabled)
       this.saveToHistory(response, userId);
 
+      logInfo(`翻译任务完成 [ID:${translationId}] [User:${userId || 'anonymous'}] [Duration:${totalDuration}ms]`);
       return response;
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logError(`翻译工作流失败 [ID:${translationId}] [User:${userId || 'anonymous'}] [Error:${message}]`);
       console.error('Translation workflow failed:', error);
       throw error;
     }

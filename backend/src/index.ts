@@ -13,7 +13,7 @@ import authRoutes from './routes/authRoutes';
 import adminRoutes from './routes/adminRoutes';
 import { attachUser } from './utils/authMiddleware';
 import { authService } from './services/authService';
-import { logInfo, logError } from './utils/logger';
+import { logInfo, logError, logRequest } from './utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -30,6 +30,17 @@ app.use(helmet());
 app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const userId = (req as any).user?.id;
+    logRequest(req.method, req.path, duration, res.statusCode, userId);
+  });
+  next();
+});
 
 // Attach user from cookie if session exists
 app.use(attachUser);
@@ -76,8 +87,9 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : 'Internal server error';
+  const stack = err instanceof Error ? err.stack : '';
   console.error('Error:', err);
-  logError(`Unhandled error: ${message}`);
+  logError(`Unhandled error at ${req.method} ${req.path}: ${message}${stack ? '\n' + stack : ''}`);
   res.status(500).json({ success: false, error: message });
 });
 

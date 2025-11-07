@@ -15,6 +15,13 @@ export const db = new Database(DB_PATH);
 // Enable foreign keys
 db.pragma('foreign_keys = ON');
 
+// 优化SQLite并发性能
+db.pragma('journal_mode = WAL'); // Write-Ahead Logging 提升并发读写
+db.pragma('synchronous = NORMAL'); // 平衡性能与安全性
+db.pragma('cache_size = -64000'); // 64MB缓存
+db.pragma('temp_store = MEMORY'); // 临时表存储在内存
+db.pragma('busy_timeout = 5000'); // 5秒锁等待超时
+
 // Create tables
 export function initDatabase() {
   // Model configurations table

@@ -148,23 +148,23 @@ export class KnowledgeService {
     console.log(`Generating embeddings for ${chunks.length} chunks...`);
     const chunksWithEmbeddings = await Promise.all(
       chunks.map(async (chunk, index) => {
-        try {
-          const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-          return {
-            id: `${id}_chunk_${index}`,
-            content: chunk,
-            embedding,
-            metadata: { index, knowledgeBaseId: id }
-          };
-        } catch (error) {
-          console.error(`Failed to generate embedding for chunk ${index}:`, error);
-          return {
-            id: `${id}_chunk_${index}`,
-            content: chunk,
-            embedding: [],
-            metadata: { index, knowledgeBaseId: id }
-          };
-        }
+      try {
+        const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+        return {
+          id: `${id}_chunk_${index}`,
+          content: chunk,
+          embedding,
+          metadata: { index, knowledgeBaseId: id }
+        };
+      } catch (error) {
+        console.error(`Failed to generate embedding for chunk ${index}:`, error);
+        return {
+          id: `${id}_chunk_${index}`,
+          content: chunk,
+          embedding: [],
+          metadata: { index, knowledgeBaseId: id }
+        };
+      }
       })
     );
 
@@ -269,21 +269,21 @@ export class KnowledgeService {
       const queryEmbedding = await llmService.generateEmbedding(model, query);
 
       for (const kbId of ids) {
-        const kb = this.getKnowledgeBaseById(kbId);
-        if (!kb) continue;
-        const store = vectorStore[kbId];
-        if (!store) continue;
-        for (const chunk of store.chunks) {
-          if (chunk.embedding.length === 0) continue;
-          const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
-          allResults.push({
-            id: chunk.id,
-            content: chunk.content,
-            similarity,
-            metadata: chunk.metadata,
-            knowledgeBaseName: kb.name,
-            score: similarity
-          });
+      const kb = this.getKnowledgeBaseById(kbId);
+      if (!kb) continue;
+      const store = vectorStore[kbId];
+      if (!store) continue;
+      for (const chunk of store.chunks) {
+        if (chunk.embedding.length === 0) continue;
+        const similarity = this.cosineSimilarity(queryEmbedding, chunk.embedding);
+        allResults.push({
+          id: chunk.id,
+          content: chunk.content,
+          similarity,
+          metadata: chunk.metadata,
+          knowledgeBaseName: kb.name,
+          score: similarity
+        });
         }
       }
     }
@@ -392,22 +392,22 @@ export class KnowledgeService {
 
         const chunksWithEmbeddings = await Promise.all(
           chunks.map(async (chunk, index) => {
-            try {
-              const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-              return {
-                id: `${kb.id}_chunk_${index}`,
-                content: chunk,
-                embedding,
-                metadata: { index, knowledgeBaseId: kb.id }
-              };
-            } catch (error) {
-              return {
-                id: `${kb.id}_chunk_${index}`,
-                content: chunk,
-                embedding: [],
-                metadata: { index, knowledgeBaseId: kb.id }
-              };
-            }
+          try {
+            const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+            return {
+              id: `${kb.id}_chunk_${index}`,
+              content: chunk,
+              embedding,
+              metadata: { index, knowledgeBaseId: kb.id }
+            };
+          } catch (error) {
+            return {
+              id: `${kb.id}_chunk_${index}`,
+              content: chunk,
+              embedding: [],
+              metadata: { index, knowledgeBaseId: kb.id }
+            };
+          }
           })
         );
 

@@ -9,11 +9,21 @@ services:
       - DATABASE_PATH=/app/data/database.sqlite
       - UPLOAD_DIR=/app/uploads
       - MAX_FILE_SIZE=10485760
+      - NODE_ENV=production
     volumes:
       - backend-data:/app/data
       - backend-uploads:/app/uploads
     networks:
       - appnet
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    restart: unless-stopped
 
   frontend:
     build:

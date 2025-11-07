@@ -2,6 +2,7 @@ import axios, { AxiosError } from 'axios';
 import fs from 'fs';
 import path from 'path';
 import type { ModelConfig, LLMRequest, LLMResponse, LLMMessage } from '../types';
+import { logError, logWarning } from '../utils/logger';
 
 export class LLMService {
   private defaultPromptCache: Record<'translation' | 'review' | 'synthesis', string | null> = {
@@ -129,6 +130,9 @@ export class LLMService {
         ? JSON.stringify(axiosError.response.data)
         : axiosError.message;
 
+      // 记录详细错误信息
+      logError(`LLM API调用失败 [Model:${config.name}] [Endpoint:${config.apiEndpoint}] [Error:${errorMessage}]`);
+      
       throw new Error(`LLM API call failed: ${errorMessage}`);
     }
   }
@@ -292,10 +296,16 @@ export class LLMService {
       const errorMessage = axiosError?.response?.data
         ? JSON.stringify(axiosError.response.data)
         : axiosError?.message || 'Embedding request failed';
+      
+      logError(`Embedding生成失败 [Model:${config.name}] [Endpoints尝试:${endpointsToTry.join(', ')}] [Error:${errorMessage}]`);
+      
       throw new Error(`Embedding generation failed: ${errorMessage}`);
     } catch (error) {
       const axiosError = error as AxiosError;
       const errorMessage = axiosError?.message || String(error);
+      
+      logError(`Embedding生成异常 [Model:${config.name}] [Error:${errorMessage}]`);
+      
       throw new Error(`Embedding generation failed: ${axiosError?.response?.data ? JSON.stringify(axiosError.response.data) : errorMessage}`);
     }
   }
