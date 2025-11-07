@@ -67,7 +67,7 @@ export function initDatabase() {
     )
   `);
 
-  // Translation history table
+  // Translation history table (will be extended with user_id)
   db.exec(`
     CREATE TABLE IF NOT EXISTS translation_history (
       id TEXT PRIMARY KEY,
@@ -77,12 +77,51 @@ export function initDatabase() {
     )
   `);
 
+  // Application settings (key/value)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+
+  // Users table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('admin','user')),
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Sessions table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Try to add user_id to translation_history for per-user isolation (older databases)
+  try {
+    db.exec(`ALTER TABLE translation_history ADD COLUMN user_id TEXT`);
+  } catch (e) {
+    // ignore if column already exists
+  }
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_model_configs_stage ON model_configs(stage);
     CREATE INDEX IF NOT EXISTS idx_model_configs_enabled ON model_configs(enabled);
     CREATE INDEX IF NOT EXISTS idx_knowledge_bases_embedding_model ON knowledge_bases(embedding_model_id);
     CREATE INDEX IF NOT EXISTS idx_translation_history_created_at ON translation_history(created_at);
+    CREATE INDEX IF NOT EXISTS idx_translation_history_user_id ON translation_history(user_id);
+    CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
   `);
 
   console.log('Database initialized successfully');

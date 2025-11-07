@@ -8,6 +8,10 @@ import { knowledgeService } from './services/knowledgeService';
 import modelRoutes from './routes/modelRoutes';
 import translationRoutes from './routes/translationRoutes';
 import knowledgeRoutes from './routes/knowledgeRoutes';
+import authRoutes from './routes/authRoutes';
+import adminRoutes from './routes/adminRoutes';
+import { attachUser } from './utils/authMiddleware';
+import { authService } from './services/authService';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +29,9 @@ app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Attach user from cookie if session exists
+app.use(attachUser);
+
 // Initialize database
 initDatabase();
 
@@ -34,6 +41,23 @@ knowledgeService.loadExistingKnowledgeBases().catch(err => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+
+// If auth is enabled, protect all other API routes by default (except health)
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return next();
+  if (req.path.startsWith('/api/health')) return next();
+  if (req.path.startsWith('/api/auth')) return next();
+  if (req.path.startsWith('/api/admin')) return next();
+  if (!authService.isAuthEnabled()) return next();
+  // @ts-expect-error augment
+  if (!(req as any).user) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  next();
+});
+
 app.use('/api/models', modelRoutes);
 app.use('/api/translations', translationRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
@@ -68,9 +92,11 @@ app.listen(PORT, () => {
 ║                                                           ║
 ║    API Endpoints:                                         ║
 ║    - GET  /api/health                                     ║
-║    - *    /api/models                                     ║
-║    - *    /api/translations                               ║
-║    - *    /api/knowledge                                  ║
+║    - *    /api/auth                                        ║
+║    - *    /api/admin                                       ║
+║    - *    /api/models                                      ║
+║    - *    /api/translations                                ║
+║    - *    /api/knowledge                                   ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
   `);

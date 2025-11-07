@@ -3,6 +3,7 @@ import { modelService } from './modelService';
 import { llmService } from './llmService';
 import { knowledgeService } from './knowledgeService';
 import { db } from '../database/schema';
+import { authService } from './authService';
 import type {
   TranslationRequest,
   TranslationResponse,
@@ -15,7 +16,7 @@ export class TranslationService {
   /**
    * Execute the three-stage translation workflow
    */
-  async translate(request: TranslationRequest): Promise<TranslationResponse> {
+  async translate(request: TranslationRequest, userId?: string): Promise<TranslationResponse> {
     const startTime = Date.now();
     const translationId = uuidv4();
 
@@ -72,8 +73,8 @@ export class TranslationService {
         createdAt: new Date().toISOString()
       };
 
-      // Save to history
-      this.saveToHistory(response);
+      // Save to history (bind user when auth enabled)
+      this.saveToHistory(response, userId);
 
       return response;
     } catch (error) {
@@ -114,7 +115,8 @@ export class TranslationService {
     sourceText: string,
     stage1Results: TranslationStageResult[],
     stage2Results: ReviewResult[],
-    stage3Results: TranslationStageResult[]
+    stage3Results: TranslationStageResult[],
+    userId?: string
   ): TranslationResponse {
     const translationId = uuidv4();
     const finalTranslation = stage3Results[0]?.output || stage1Results[0]?.output || '';
@@ -132,7 +134,7 @@ export class TranslationService {
       createdAt: new Date().toISOString()
     };
 
-    this.saveToHistory(response);
+    this.saveToHistory(response, userId);
     return response;
   }
 
@@ -425,18 +427,19 @@ ${sourceText}
   /**
    * Save translation to history
    */
-  private saveToHistory(response: TranslationResponse): void {
+  private saveToHistory(response: TranslationResponse, userId?: string): void {
     try {
       const stmt = db.prepare(`
-        INSERT INTO translation_history (id, source_text, result_json, created_at)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO translation_history (id, source_text, result_json, created_at, user_id)
+        VALUES (?, ?, ?, ?, ?)
       `);
 
       stmt.run(
         response.id,
         response.sourceText,
         JSON.stringify(response),
-        response.createdAt
+        response.createdAt,
+        authService.isAuthEnabled() ? (userId || null) : null
       );
     } catch (error) {
       console.error('Failed to save translation history:', error);
@@ -446,14 +449,24 @@ ${sourceText}
   /**
    * Get translation history
    */
-  getHistory(limit: number = 50): TranslationResponse[] {
-    const stmt = db.prepare(`
-      SELECT * FROM translation_history
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-
-    const rows = stmt.all(limit) as any[];
+  getHistory(limit: number = 50, userId?: string): TranslationResponse[] {
+    let rows: any[] = [];
+    if (authService.isAuthEnabled()) {
+      const stmt = db.prepare(`
+        SELECT * FROM translation_history
+        WHERE user_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(userId, limit) as any[];
+    } else {
+      const stmt = db.prepare(`
+        SELECT * FROM translation_history
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(limit) as any[];
+    }
     return rows.map(row => JSON.parse(row.result_json));
   }
 
@@ -471,14 +484,25 @@ ${sourceText}
   /**
    * Search history by source text (SQL LIKE)
    */
-  searchHistory(query: string, limit: number = 50): TranslationResponse[] {
-    const stmt = db.prepare(`
-      SELECT * FROM translation_history
-      WHERE source_text LIKE ?
-      ORDER BY created_at DESC
-      LIMIT ?
-    `);
-    const rows = stmt.all(`%${query}%`, limit) as any[];
+  searchHistory(query: string, limit: number = 50, userId?: string): TranslationResponse[] {
+    let rows: any[] = [];
+    if (authService.isAuthEnabled()) {
+      const stmt = db.prepare(`
+        SELECT * FROM translation_history
+        WHERE user_id = ? AND source_text LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(userId, `%${query}%`, limit) as any[];
+    } else {
+      const stmt = db.prepare(`
+        SELECT * FROM translation_history
+        WHERE source_text LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `);
+      rows = stmt.all(`%${query}%`, limit) as any[];
+    }
     return rows.map(row => JSON.parse(row.result_json));
   }
 }
