@@ -51,6 +51,7 @@ const vectorStore: VectorStore = {};
 
 export class KnowledgeService {
   private uploadDir: string;
+  private processingProgress: Record<string, { total: number; processed: number }> = {};
 
   constructor() {
     this.uploadDir = process.env.UPLOAD_DIR || './uploads';
@@ -144,38 +145,7 @@ export class KnowledgeService {
     // Split into chunks
     const chunks = this.splitIntoChunks(text);
 
-    // Get embedding model
-    const embeddingModel = modelService.getModelById(dto.embeddingModelId);
-    if (!embeddingModel) {
-      throw new Error('Embedding model not found');
-    }
-
-    // Generate embeddings for chunks (no concurrency limit)
-    console.log(`Generating embeddings for ${chunks.length} chunks...`);
-    const chunksWithEmbeddings = await mapWithConcurrency(chunks, 2, async (chunk, index) => {
-      try {
-        const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
-        return {
-          id: `${id}_chunk_${index}`,
-          content: chunk,
-          embedding,
-          metadata: { index, knowledgeBaseId: id }
-        };
-      } catch (error) {
-        console.error(`Failed to generate embedding for chunk ${index}:`, error);
-        return {
-          id: `${id}_chunk_${index}`,
-          content: chunk,
-          embedding: [],
-          metadata: { index, knowledgeBaseId: id }
-        };
-      }
-    });
-
-    // Store in vector store
-    vectorStore[id] = { chunks: chunksWithEmbeddings };
-
-    // Save to database
+    // Save to database first (异步构建向量，避免超时)
     const stmt = db.prepare(`
       INSERT INTO knowledge_bases (
         id, name, description, file_type, file_name, file_path,
@@ -199,6 +169,48 @@ export class KnowledgeService {
       now,
       now
     );
+
+    // 启动后台任务：为chunks生成向量，完成后装入内存向量存储
+    // 避免阻塞请求导致 Nginx/Cloudflare 504
+    const embeddingModel = modelService.getModelById(dto.embeddingModelId);
+    if (embeddingModel) {
+      // 初始化进度
+      this.processingProgress[id] = { total: chunks.length, processed: 0 };
+      setImmediate(async () => {
+        try {
+          console.log(`Generating embeddings for ${chunks.length} chunks...`);
+          const chunksWithEmbeddings = await mapWithConcurrency(chunks, 2, async (chunk, index) => {
+            try {
+              const embedding = await llmService.generateEmbedding(embeddingModel, chunk);
+              this.processingProgress[id].processed++;
+              return {
+                id: `${id}_chunk_${index}`,
+                content: chunk,
+                embedding,
+                metadata: { index, knowledgeBaseId: id }
+              };
+            } catch (error) {
+              console.error(`Failed to generate embedding for chunk ${index}:`, error);
+              this.processingProgress[id].processed++;
+              return {
+                id: `${id}_chunk_${index}`,
+                content: chunk,
+                embedding: [],
+                metadata: { index, knowledgeBaseId: id }
+              };
+            }
+          });
+          vectorStore[id] = { chunks: chunksWithEmbeddings };
+          console.log(`Knowledge base embeddings built: ${dto.name} (${id})`);
+        } catch (e) {
+          console.error(`Background embedding build failed for KB ${id}:`, e);
+        } finally {
+          delete this.processingProgress[id];
+        }
+      });
+    } else {
+      console.error(`Embedding model ${dto.embeddingModelId} not found, skip background build for KB ${id}`);
+    }
 
     return this.getKnowledgeBaseById(id)!;
   }

@@ -113,9 +113,10 @@ router.post('/', upload.single('file'), async (req, res) => {
     const response: ApiResponse = {
       success: true,
       data: knowledgeBase,
-      message: 'Knowledge base created successfully'
+      message: 'Knowledge base created, background embedding build started'
     };
-    res.status(201).json(response);
+    // 返回 202，提示后台处理中，避免前端长时间等待导致504
+    res.status(202).json(response);
   } catch (error) {
     console.error('Create knowledge base error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
